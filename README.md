@@ -920,7 +920,7 @@ Search parameters are passed to Anki, check the docs for more information: https
 
 #### `deleteDecks`
 
-*   Deletes decks with the given names. 
+*   Deletes decks with the given names.
     The argument `cardsToo` *must* be specified and set to `true`.
 
     <details>
@@ -2318,6 +2318,381 @@ Search parameters are passed to Anki, check the docs for more information: https
             "Basic (optional reversed card)": 1483883011631,
             "Cloze": 1483883011630
         },
+        "error": null
+    }
+    ```
+    </details>
+
+#### `findModelsById`
+
+*   Gets a list of models  for the provided model IDs from the current user.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "findModelsById",
+        "version": 6,
+        "params": {
+            "modelIds": [ 1704387367119, 1704387398570 ]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": [
+          {
+            "id": 1704387367119,
+            "name": "Basic",
+            "type": 0,
+            "mod": 1704387367,
+            "usn": -1,
+            "sortf": 0,
+            "did": null,
+            "tmpls": [
+              {
+                "name": "Card 1",
+                "ord": 0,
+                "qfmt": "{{Front}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": 9176047152973362695
+              }
+            ],
+            "flds": [
+              {
+                "name": "Front",
+                "ord": 0,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": 2453723143453745216,
+                "tag": null,
+                "preventDeletion": false
+              },
+              {
+                "name": "Back",
+                "ord": 1,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": -4853200230425436781,
+                "tag": null,
+                "preventDeletion": false
+              }
+            ],
+            "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+            "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+            "latexPost": "\\end{document}",
+            "latexsvg": false,
+            "req": [
+              [
+                0,
+                "any",
+                [
+                  0
+                ]
+              ]
+            ],
+            "originalStockKind": 1
+          },
+          {
+            "id": 1704387398570,
+            "name": "Basic (and reversed card)",
+            "type": 0,
+            "mod": 1704387398,
+            "usn": -1,
+            "sortf": 0,
+            "did": null,
+            "tmpls": [
+              {
+                "name": "Card 1",
+                "ord": 0,
+                "qfmt": "{{Front}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": 1689886528158874152
+              },
+              {
+                "name": "Card 2",
+                "ord": 1,
+                "qfmt": "{{Back}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Front}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": -7839609225644824587
+              }
+            ],
+            "flds": [
+              {
+                "name": "Front",
+                "ord": 0,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": -7787837672455357996,
+                "tag": null,
+                "preventDeletion": false
+              },
+              {
+                "name": "Back",
+                "ord": 1,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": 6364828289839985081,
+                "tag": null,
+                "preventDeletion": false
+              }
+            ],
+            "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+            "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+            "latexPost": "\\end{document}",
+            "latexsvg": false,
+            "req": [
+              [
+                0,
+                "any",
+                [
+                  0
+                ]
+              ],
+              [
+                1,
+                "any",
+                [
+                  1
+                ]
+              ]
+            ],
+            "originalStockKind": 1
+          }
+        ],
+        "error": null
+    }
+    ```
+    </details>
+
+
+#### `findModelsByName`
+
+*   Gets a list of models for the provided model names from the current user.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "findModelsByName",
+        "version": 6,
+        "params": {
+            "modelNames": ["Basic", "Basic (and reversed card)"]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": [
+          {
+            "id": 1704387367119,
+            "name": "Basic",
+            "type": 0,
+            "mod": 1704387367,
+            "usn": -1,
+            "sortf": 0,
+            "did": null,
+            "tmpls": [
+              {
+                "name": "Card 1",
+                "ord": 0,
+                "qfmt": "{{Front}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": 9176047152973362695
+              }
+            ],
+            "flds": [
+              {
+                "name": "Front",
+                "ord": 0,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": 2453723143453745216,
+                "tag": null,
+                "preventDeletion": false
+              },
+              {
+                "name": "Back",
+                "ord": 1,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": -4853200230425436781,
+                "tag": null,
+                "preventDeletion": false
+              }
+            ],
+            "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+            "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+            "latexPost": "\\end{document}",
+            "latexsvg": false,
+            "req": [
+              [
+                0,
+                "any",
+                [
+                  0
+                ]
+              ]
+            ],
+            "originalStockKind": 1
+          },
+          {
+            "id": 1704387398570,
+            "name": "Basic (and reversed card)",
+            "type": 0,
+            "mod": 1704387398,
+            "usn": -1,
+            "sortf": 0,
+            "did": null,
+            "tmpls": [
+              {
+                "name": "Card 1",
+                "ord": 0,
+                "qfmt": "{{Front}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": 1689886528158874152
+              },
+              {
+                "name": "Card 2",
+                "ord": 1,
+                "qfmt": "{{Back}}",
+                "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Front}}",
+                "bqfmt": "",
+                "bafmt": "",
+                "did": null,
+                "bfont": "",
+                "bsize": 0,
+                "id": -7839609225644824587
+              }
+            ],
+            "flds": [
+              {
+                "name": "Front",
+                "ord": 0,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": -7787837672455357996,
+                "tag": null,
+                "preventDeletion": false
+              },
+              {
+                "name": "Back",
+                "ord": 1,
+                "sticky": false,
+                "rtl": false,
+                "font": "Arial",
+                "size": 20,
+                "description": "",
+                "plainText": false,
+                "collapsed": false,
+                "excludeFromSearch": false,
+                "id": 6364828289839985081,
+                "tag": null,
+                "preventDeletion": false
+              }
+            ],
+            "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+            "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+            "latexPost": "\\end{document}",
+            "latexsvg": false,
+            "req": [
+              [
+                0,
+                "any",
+                [
+                  0
+                ]
+              ],
+              [
+                1,
+                "any",
+                [
+                  1
+                ]
+              ]
+            ],
+            "originalStockKind": 1
+          }
+        ],
         "error": null
     }
     ```
