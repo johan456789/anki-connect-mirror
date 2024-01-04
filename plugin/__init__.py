@@ -1112,6 +1112,28 @@ class AnkiConnect:
 
 
     @util.api()
+    def findModelsById(self, modelIds):
+        models = []
+        for id in modelIds:
+            model = self.collection().models.get(id)
+            if model is None:
+                raise Exception("model was not found: {}".format(id))
+            else:
+                models.append(model)
+        return models
+
+    @util.api()
+    def findModelsByName(self, modelNames):
+        models = []
+        for name in modelNames:
+            model = self.collection().models.byName(name)
+            if model is None:
+                raise Exception("model was not found: {}".format(name))
+            else:
+                models.append(model)
+        return models
+
+    @util.api()
     def modelNameFromId(self, modelId):
         model = self.collection().models.get(modelId)
         if model is None:
