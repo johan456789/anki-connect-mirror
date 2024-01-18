@@ -1669,7 +1669,7 @@ class AnkiConnect:
 
 
     @util.api()
-    def guiBrowse(self, query=None):
+    def guiBrowse(self, query=None, reorderCards=None):
         browser = aqt.dialogs.open('Browser', self.window())
         browser.activateWindow()
 
@@ -1680,6 +1680,23 @@ class AnkiConnect:
             else:
                 browser.onSearchActivated()
 
+        if reorderCards is not None:
+            if not isinstance(reorderCards, dict):
+                raise Exception('reorderCards should be a dict: {}'.format(reorderCards))
+            if not ('columnId' in reorderCards and 'order' in reorderCards):
+                raise Exception('Must provide a "columnId" and a "order" property"')
+
+            cardOrder = reorderCards['order']
+            if cardOrder not in ('ascending', 'descending'):
+                raise Exception('invalid card order: {}'.format(reorderCards['order']))
+
+            cardOrder = Qt.SortOrder.DescendingOrder if cardOrder == 'descending' else Qt.SortOrder.AscendingOrder
+            columnId = browser.table._model.active_column_index(reorderCards['columnId'])
+            if columnId == None:
+                raise Exception('invalid columnId: {}'.format(reorderCards['columnId']))
+
+            browser.table._on_sort_column_changed(columnId, cardOrder)
+
         return self.findCards(query)
 
 
@@ -1687,6 +1704,14 @@ class AnkiConnect:
     def guiEditNote(self, note):
         Edit.open_dialog_and_show_note_with_id(note)
 
+    @util.api()
+    def guiSelectNote(self, note):
+        (creator, instance) = aqt.dialogs._dialogs['Browser']
+        if instance is None:
+            return False
+        instance.table.clear_selection()
+        instance.table.select_single_card(note)
+        return True
 
     @util.api()
     def guiSelectedNotes(self):

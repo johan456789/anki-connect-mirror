@@ -1226,6 +1226,10 @@ Search parameters are passed to Anki, check the docs for more information: https
 *   Invokes the *Card Browser* dialog and searches for a given query. Returns an array of identifiers of the cards that
     were found. Query syntax is [documented here](https://docs.ankiweb.net/searching.html).
 
+    Optionally, the `reorderCards` property can be provided to reorder the cards shown in the *Card Browser*.
+    This is an array including the `order` and `columnId` objects. `order` can be either `ascending` or `descending` while `columnId` can be one of several column identifiers (as documented in the [Anki source code](https://github.com/ankitects/anki/blob/main/rslib/src/browser_table.rs)).
+    The specified column needs to be visible in the *Card Browser*.
+
     <details>
     <summary><i>Sample request:</i></summary>
 
@@ -1234,7 +1238,11 @@ Search parameters are passed to Anki, check the docs for more information: https
         "action": "guiBrowse",
         "version": 6,
         "params": {
-            "query": "deck:current"
+            "query": "deck:current",
+            "reorderCards": {
+                "order": "descending",
+                "columnId": "noteCrt"
+            }
         }
     }
     ```
@@ -1246,6 +1254,36 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```json
     {
         "result": [1494723142483, 1494703460437, 1494703479525],
+        "error": null
+    }
+    ```
+    </details>
+
+#### `guiSelectNote`
+
+*   Finds the open instance of the *Card Browser* dialog and selects a note given a note identifier.
+    Returns `True` if the *Card Browser* is open, `False` otherwise.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "guiSelectNote",
+        "version": 6,
+        "params": {
+            "note": 1494723142483
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": true,
         "error": null
     }
     ```
