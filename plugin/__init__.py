@@ -708,10 +708,7 @@ class AnkiConnect:
 
     @util.api()
     def deleteMediaFile(self, filename):
-        try:
-            self.media().syncDelete(filename)
-        except AttributeError:
-            self.media().trash_files([filename])
+        self.media().trash_files([filename])
 
     @util.api()
     def getMediaDirPath(self):
