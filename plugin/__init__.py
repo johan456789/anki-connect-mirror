@@ -214,11 +214,6 @@ class AnkiConnect:
         self.window().requireReset()
 
 
-    def stopEditing(self):
-        if self.collection() is not None:
-            self.window().maybeReset()
-
-
     def createNote(self, note):
         collection = self.collection()
 
@@ -545,13 +540,8 @@ class AnkiConnect:
 
     @util.api()
     def createDeck(self, deck):
-        try:
-            self.startEditing()
-            did = self.decks().id(deck)
-        finally:
-            self.stopEditing()
-
-        return did
+        self.startEditing()
+        return  self.decks().id(deck)
 
 
     @util.api()
@@ -569,7 +559,6 @@ class AnkiConnect:
 
         # then move into new deck
         self.collection().db.execute('update cards set usn=?, mod=?, did=? where id in ' + scids, usn, mod, did)
-        self.stopEditing()
 
 
     @util.api()
@@ -583,14 +572,11 @@ class AnkiConnect:
             # this is dangerous, so let's raise our own exception
             raise Exception("Since Anki 2.1.28 it's not possible "
                             "to delete decks without deleting cards as well")
-        try:
-            self.startEditing()
-            decks = filter(lambda d: d in self.deckNames(), decks)
-            for deck in decks:
-                did = self.decks().id(deck)
-                self.decks().rem(did, cardsToo=cardsToo)
-        finally:
-            self.stopEditing()
+        self.startEditing()
+        decks = filter(lambda d: d in self.deckNames(), decks)
+        for deck in decks:
+            did = self.decks().id(deck)
+            self.decks().rem(did, cardsToo=cardsToo)
 
 
     @util.api()
@@ -741,7 +727,6 @@ class AnkiConnect:
         if nCardsAdded < 1:
             raise Exception('The field values you have provided would make an empty question on all cards.')
         collection.autosave()
-        self.stopEditing()
 
         return ankiNote.id
 
@@ -821,7 +806,6 @@ class AnkiConnect:
         ankiNote.flush()
 
         self.collection().autosave()
-        self.stopEditing()
 
 
     @util.api()
@@ -859,7 +843,6 @@ class AnkiConnect:
     def addTags(self, notes, tags, add=True):
         self.startEditing()
         self.collection().tags.bulkAdd(notes, tags, add)
-        self.stopEditing()
 
 
     @util.api()
@@ -993,7 +976,6 @@ class AnkiConnect:
             scheduler.suspendCards(cards)
         else:
             scheduler.unsuspendCards(cards)
-        self.stopEditing()
 
         return True
 
@@ -1541,7 +1523,6 @@ class AnkiConnect:
         self.startEditing()
         scids = anki.utils.ids2str(cards)
         self.collection().db.execute('update cards set type=0, queue=0, left=0, ivl=0, due=0, odue=0, factor=0 where id in ' + scids)
-        self.stopEditing()
 
 
     @util.api()
@@ -1549,7 +1530,6 @@ class AnkiConnect:
         self.startEditing()
         scids = anki.utils.ids2str(cards)
         self.collection().db.execute('update cards set type=3, queue=1 where id in ' + scids)
-        self.stopEditing()
 
 
     @util.api()
@@ -1649,10 +1629,7 @@ class AnkiConnect:
 
     @util.api()
     def deleteNotes(self, notes):
-        try:
-            self.collection().remNotes(notes)
-        finally:
-            self.stopEditing()
+        self.collection().remNotes(notes)
 
 
     @util.api()
@@ -1999,10 +1976,8 @@ class AnkiConnect:
                 importer = AnkiPackageImporter(collection, path)
                 importer.run()
             except:
-                self.stopEditing()
                 raise
             else:
-                self.stopEditing()
                 return True
 
         return False
