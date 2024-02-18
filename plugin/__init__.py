@@ -41,6 +41,7 @@ from anki.exporting import AnkiPackageExporter
 from anki.importing import AnkiPackageImporter
 from anki.notes import Note
 from anki.errors import NotFoundError
+from anki.scheduler.base import ScheduleCardsAsNew
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 
 from .web import format_exception_reply, format_success_reply
@@ -1514,13 +1515,17 @@ class AnkiConnect:
                 result.append({})
         return result
 
-
     @util.api()
     def forgetCards(self, cards):
         self.startEditing()
-        scids = anki.utils.ids2str(cards)
-        self.collection().db.execute('update cards set type=0, queue=0, left=0, ivl=0, due=0, odue=0, factor=0 where id in ' + scids)
-
+        request = ScheduleCardsAsNew(
+            card_ids=cards,
+            log=True,
+            restore_position=True,
+            reset_counts=False,
+            context=None,
+        )
+        self.collection()._backend.schedule_cards_as_new(request)
 
     @util.api()
     def relearnCards(self, cards):
