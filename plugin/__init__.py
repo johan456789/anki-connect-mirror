@@ -417,14 +417,20 @@ class AnkiConnect:
             msg.setText('"{}" requests permission to use Anki through AnkiConnect. Do you want to give it access?'.format(origin))
             msg.setInformativeText("By granting permission, you'll allow the website to modify your collection on your behalf, including the execution of destructive actions such as deck deletion.")
             msg.setWindowIcon(self.window().windowIcon())
-            msg.setIcon(QMessageBox.Question)
-            msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
-            msg.setDefaultButton(QMessageBox.No)
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)
+            msg.setDefaultButton(QMessageBox.StandardButton.No)
             msg.setCheckBox(QCheckBox(text='Ignore further requests from "{}"'.format(origin), parent=msg))
-            msg.setWindowFlags(Qt.WindowStaysOnTopHint)
-            pressedButton = msg.exec_()
+            if hasattr(Qt, 'WindowStaysOnTopHint'):
+                # Qt5
+                WindowOnTopFlag = Qt.WindowStaysOnTopHint
+            elif hasattr(Qt, 'WindowType') and hasattr(Qt.WindowType, 'WindowStaysOnTopHint'):
+                # Qt6
+                WindowOnTopFlag = Qt.WindowType.WindowStaysOnTopHint
+            msg.setWindowFlags(WindowOnTopFlag)
+            pressedButton = msg.exec()
 
-            if pressedButton == QMessageBox.Yes:
+            if pressedButton == QMessageBox.StandardButton.Yes:
                 config = aqt.mw.addonManager.getConfig(__name__)
                 config["webCorsOriginList"] = util.setting('webCorsOriginList')
                 config["webCorsOriginList"].append(origin)
@@ -436,7 +442,7 @@ class AnkiConnect:
                 }
 
             # if the origin isn't an empty string, the user clicks "No", and the ignore box is checked
-            elif origin and pressedButton == QMessageBox.No and msg.checkBox().isChecked():
+            elif origin and pressedButton == QMessageBox.StandardButton.No and msg.checkBox().isChecked():
                 config = aqt.mw.addonManager.getConfig(__name__)
                 config["ignoreOriginList"] = util.setting('ignoreOriginList')
                 config["ignoreOriginList"].append(origin)
