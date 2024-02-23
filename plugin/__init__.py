@@ -788,6 +788,17 @@ class AnkiConnect:
         except:
             return False
 
+    @util.api()
+    def canAddNoteWithErrorDetail(self, note):
+        try:
+            return {
+                'canAdd': bool(self.createNote(note))
+            }
+        except Exception as e:
+            return {
+                'canAdd': False,
+                'error': str(e)
+            }
 
     @util.api()
     def updateNoteFields(self, note):
@@ -1956,6 +1967,14 @@ class AnkiConnect:
         results = []
         for note in notes:
             results.append(self.canAddNote(note))
+
+        return results
+
+    @util.api()
+    def canAddNotesWithErrorDetail(self, notes):
+        results = []
+        for note in notes:
+            results.append(self.canAddNoteWithErrorDetail(note))
 
         return results
 

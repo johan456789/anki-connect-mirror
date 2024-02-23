@@ -3698,6 +3698,70 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```
     </details>
 
+#### `canAddNotesWithErrorDetail`
+
+*   Accepts an array of objects which define parameters for candidate notes (see `addNote`) and returns an array of
+    objects with fields `canAdd` and `error`.
+
+    * `canAdd` indicates whether or not the parameters at the corresponding index could be used to create a new note.
+    * `error` contains an explanation of why a note cannot be added.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "canAddNotesWithErrorDetail",
+        "version": 6,
+        "params": {
+            "notes": [
+                {
+                    "deckName": "Default",
+                    "modelName": "Basic",
+                    "fields": {
+                        "Front": "front content",
+                        "Back": "back content"
+                    },
+                    "tags": [
+                        "yomichan"
+                    ]
+                },
+                {
+                    "deckName": "Default",
+                    "modelName": "Basic",
+                    "fields": {
+                        "Front": "front content 2",
+                        "Back": "back content 2"
+                    },
+                    "tags": [
+                        "yomichan"
+                    ]
+                }
+            ]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": [
+            {
+                canAdd: false,
+                error: 'cannot create note because it is a duplicate'
+            },
+            {
+                canAdd: true
+            }
+        ],
+        "error": null
+    }
+    ```
+    </details>
+
 #### `updateNoteFields`
 
 *   Modify the fields of an existing note. You can also include audio, video, or picture files which will be added to the note with an
