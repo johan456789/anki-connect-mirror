@@ -1988,7 +1988,7 @@ Search parameters are passed to Anki, check the docs for more information: https
     </details>
 
     <details>
-    <summary><i>Samples results:</i></summary>
+    <summary><i>Sample results:</i></summary>
 
     ```json
     {
@@ -3750,11 +3750,11 @@ Search parameters are passed to Anki, check the docs for more information: https
     {
         "result": [
             {
-                canAdd: false,
-                error: 'cannot create note because it is a duplicate'
+                "canAdd": false,
+                "error": "cannot create note because it is a duplicate"
             },
             {
-                canAdd: true
+                "canAdd": true
             }
         ],
         "error": null
