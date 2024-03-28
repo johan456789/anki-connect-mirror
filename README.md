@@ -1262,7 +1262,7 @@ Search parameters are passed to Anki, check the docs for more information: https
 #### `guiSelectNote`
 
 *   Finds the open instance of the *Card Browser* dialog and selects a note given a note identifier.
-    Returns `True` if the *Card Browser* is open, `False` otherwise.
+    Returns `true` if the *Card Browser* is open, `false` otherwise.
 
     <details>
     <summary><i>Sample request:</i></summary>
@@ -2057,11 +2057,11 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```json
     {
         "action": "apiReflect",
+        "version": 6,
         "params": {
             "scopes": ["actions", "invalidType"],
             "actions": ["apiReflect", "invalidMethod"]
-        },
-        "version": 6
+        }
     }
     ```
     </details>
@@ -2142,10 +2142,10 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```json
     {
         "action": "loadProfile",
+        "version": 6,
         "params": {
             "name": "user1"
-        },
-        "version": 6
+        }
     }
     ```
     </details>
@@ -2373,7 +2373,7 @@ Search parameters are passed to Anki, check the docs for more information: https
         "action": "findModelsById",
         "version": 6,
         "params": {
-            "modelIds": [ 1704387367119, 1704387398570 ]
+            "modelIds": [1704387367119, 1704387398570]
         }
     }
     ```
@@ -2868,13 +2868,13 @@ Search parameters are passed to Anki, check the docs for more information: https
 #### `createModel`
 
 *   Creates a new model to be used in Anki. User must provide the `modelName`, `inOrderFields` and `cardTemplates` to be
-    used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `False`. If `isCloze` is `True` then model will be created as Cloze.
+    used in the model. There are optional fields `css` and `isCloze`. If not specified, `css` will use the default Anki css and `isCloze` will be equal to `false`. If `isCloze` is `true` then model will be created as Cloze.
 
     Optionally the `Name` field can be provided for each entry of `cardTemplates`. By default the
     card names will be `Card 1`, `Card 2`, and so on.
 
     <details>
-    <summary><i>Sample request</i></summary>
+    <summary><i>Sample request:</i></summary>
 
     ```json
     {
@@ -2898,7 +2898,7 @@ Search parameters are passed to Anki, check the docs for more information: https
     </details>
 
     <details>
-    <summary><i>Sample result</i></summary>
+    <summary><i>Sample result:</i></summary>
 
     ```json
     {
@@ -2988,7 +2988,7 @@ Search parameters are passed to Anki, check the docs for more information: https
     </details>
 
     <details>
-    <summary><i>Sample result</i></summary>
+    <summary><i>Sample result:</i></summary>
 
     ```json
     {
@@ -3026,7 +3026,7 @@ Search parameters are passed to Anki, check the docs for more information: https
     </details>
 
     <details>
-    <summary><i>Sample result</i></summary>
+    <summary><i>Sample result:</i></summary>
 
     ```json
     {
@@ -3186,7 +3186,7 @@ Search parameters are passed to Anki, check the docs for more information: https
 
     ```json
     {
-        "action": "modelTemplateRemove",
+        "action": "modelTemplateReposition",
         "version": 6,
         "params": {
             "modelName": "Basic",
@@ -3439,7 +3439,7 @@ Search parameters are passed to Anki, check the docs for more information: https
 
     ```json
     {
-        "action": "modelFieldSetFont",
+        "action": "modelFieldSetFontSize",
         "version": 6,
         "params": {
             "modelName": "Basic",
@@ -3849,7 +3849,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         }
     }
     ```
-
     </details>
 
     <details>
@@ -3861,7 +3860,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         "error": null
     }
     ```
-
     </details>
 
 #### `updateNoteTags`
@@ -3881,7 +3879,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         }
     }
     ```
-
     </details>
 
     <details>
@@ -3893,7 +3890,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         "error": null
     }
     ```
-
     </details>
 
 #### `getNoteTags`
@@ -3912,7 +3908,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         }
     }
     ```
-
     </details>
 
     <details>
@@ -3924,7 +3919,6 @@ Search parameters are passed to Anki, check the docs for more information: https
         "error": null
     }
     ```
-
     </details>
 
 #### `addTags`
@@ -4307,8 +4301,8 @@ Search parameters are passed to Anki, check the docs for more information: https
 
     ```json
     {
-        "error": null,
-        "result": "<center> lots of HTML here </center>"
+        "result": "<center> lots of HTML here </center>",
+        "error": null
     }
     ```
     </details>
