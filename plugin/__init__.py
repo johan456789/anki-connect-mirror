@@ -15,10 +15,11 @@
 
 import aqt
 
+required_anki_version = (26, 6, 3)
 anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
 
-if anki_version < (2, 1, 45):
-    raise Exception("Minimum Anki version supported: 2.1.45")
+if anki_version < required_anki_version:
+    raise Exception("Minimum Anki version supported: {required_anki_version[0]}.{required_anki_version[1]}.{required_anki_version[2]}")
 
 import base64
 import glob
