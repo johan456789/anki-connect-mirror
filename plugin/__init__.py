@@ -742,7 +742,6 @@ class AnkiConnect:
         nCardsAdded = collection.addNote(ankiNote)
         if nCardsAdded < 1:
             raise Exception('The field values you have provided would make an empty question on all cards.')
-        collection.autosave()
 
         return ankiNote.id
 
@@ -832,8 +831,6 @@ class AnkiConnect:
 
         ankiNote.flush()
 
-        self.collection().autosave()
-
 
     @util.api()
     def updateNote(self, note):
@@ -898,9 +895,6 @@ class AnkiConnect:
 
         # Flush changes to ensure they are saved
         anki_note.flush()
-
-        # Save changes to the collection
-        collection.autosave()
 
     @util.api()
     def updateNoteTags(self, note, tags):
