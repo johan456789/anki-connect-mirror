@@ -835,6 +835,64 @@ class AnkiConnect:
         if not updated:
             raise Exception('Must provide a "fields" or "tags" property.')
 
+    @util.api()
+    def updateNoteModel(self, note):
+        """
+        Update the model and fields of a given note.
+
+        :param note: A dictionary containing note details, including 'id', 'modelName', 'fields', and 'tags'.
+        """
+        try:
+            # Extract and validate the note ID
+            note_id = note.get('id')
+            if not note_id:
+                raise ValueError("Note ID is required")
+
+            # Extract and validate the new model name
+            new_model_name = note.get('modelName')
+            if not new_model_name:
+                raise ValueError("Model name is required")
+
+            # Extract and validate the new fields
+            new_fields = note.get('fields')
+            if not new_fields or not isinstance(new_fields, dict):
+                raise ValueError("Fields must be provided as a dictionary")
+
+            # Extract the new tags
+            new_tags = note.get('tags', [])
+
+            # Get the current note from the collection
+            anki_note = self.getNote(note_id)
+
+            # Get the new model from the collection
+            collection = self.collection()
+            new_model = collection.models.by_name(new_model_name)
+            if not new_model:
+                raise ValueError(f"Model '{new_model_name}' not found")
+
+            # Update the note's model
+            anki_note.mid = new_model['id']
+            anki_note._fmap = collection.models.field_map(new_model)
+            anki_note.fields = [''] * len(new_model['flds'])
+
+            # Update the fields with new values
+            for name, value in new_fields.items():
+                for anki_name in anki_note.keys():
+                    if name.lower() == anki_name.lower():
+                        anki_note[anki_name] = value
+                        break
+
+            # Update the tags
+            anki_note.tags = new_tags
+
+            # Flush changes to ensure they are saved
+            anki_note.flush()
+
+            # Save changes to the collection
+            collection.autosave()
+
+        except Exception as e:
+            raise Exception(f"Failed to update note model: {e}")
 
     @util.api()
     def updateNoteTags(self, note, tags):
