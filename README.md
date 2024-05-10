@@ -3862,6 +3862,47 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```
     </details>
 
+#### `updateNoteModel`
+
+* Update the model, fields, and tags of an existing note.
+    This allows you to change the note's model, update its fields with new content, and set new tags.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "updateNoteModel",
+        "version": 6,
+        "params": {
+            "note": {
+                "id": 1514547547030,
+                "modelName": "NewModel",
+                "fields": {
+                    "NewField1": "new field 1",
+                    "NewField2": "new field 2",
+                    "NewField3": "new field 3"
+                },
+                "tags": ["new", "updated", "tags"]
+            }
+        }
+    }
+    ```
+
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": null,
+        "error": null
+    }
+    ```
+
+    </details>
+
 #### `updateNoteTags`
 
 *   Set a note's tags by note ID. Old tags will be removed.
