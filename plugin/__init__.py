@@ -1535,6 +1535,8 @@ class AnkiConnect:
                     order = info['ord']
                     name = info['name']
                     fields[name] = {'value': note.fields[order], 'order': order}
+                states = self.collection()._backend.get_scheduling_states(card.id)
+                nextReviews = self.collection()._backend.describe_next_states(states)
 
                 result.append({
                     'cardId': card.id,
@@ -1558,6 +1560,7 @@ class AnkiConnect:
                     'lapses': card.lapses,
                     'left': card.left,
                     'mod': card.mod,
+                    'nextReviews': list(nextReviews),
                 })
             except NotFoundError:
                 # Anki will give a NotFoundError if the card ID does not exist.
