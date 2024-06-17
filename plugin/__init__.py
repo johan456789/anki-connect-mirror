@@ -1699,6 +1699,7 @@ class AnkiConnect:
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
+                    'mod': note.mod,
                     'cards': self.collection().db.list('select id from cards where nid = ? order by ord', note.id)
                 })
             except NotFoundError:
@@ -1710,6 +1711,23 @@ class AnkiConnect:
 
         return result
 
+    @util.api()
+    def notesModTime(self, notes):
+        result = []
+        for nid in notes:
+            try:
+                note = self.getNote(nid)
+                result.append({
+                    'noteId': note.id,
+                    'mod': note.mod
+                })
+            except NotFoundError:
+                # Anki will give a NotFoundError if the note ID does not exist.
+                # Best behavior is probably to add an 'empty card' to the
+                # returned result, so that the items of the input and return
+                # lists correspond.
+                result.append({})
+        return result
 
     @util.api()
     def deleteNotes(self, notes):

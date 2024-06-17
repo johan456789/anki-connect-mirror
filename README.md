@@ -4147,7 +4147,7 @@ Search parameters are passed to Anki, check the docs for more information: https
 
 #### `notesInfo`
 
-*   Returns a list of objects containing for each note ID the note fields, tags, note type and the cards belonging to
+*   Returns a list of objects containing for each note ID the note fields, tags, note type, modification time and the cards belonging to
     the note.
 
     <details>
@@ -4177,7 +4177,42 @@ Search parameters are passed to Anki, check the docs for more information: https
                 "fields": {
                     "Front": {"value": "front content", "order": 0},
                     "Back": {"value": "back content", "order": 1}
-                }
+                },
+                "mod": 1718377864,
+            }
+        ],
+        "error": null
+    }
+    ```
+    </details>
+s
+#### `notesModTime`
+
+*   Returns a list of objects containings for each note ID the modification time.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "notesModTime",
+        "version": 6,
+        "params": {
+            "notes": [1502298033753]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": [
+            {
+                "noteId": 1498938915662,
+                "mod": 1629454092
             }
         ],
         "error": null
