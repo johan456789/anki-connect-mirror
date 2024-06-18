@@ -3592,55 +3592,36 @@ Search parameters are passed to Anki, check the docs for more information: https
 #### `addNotes`
 
 *   Creates multiple notes using the given deck and model, with the provided field values and tags. Returns an array of
-    identifiers of the created notes (notes that could not be created will have a `null` identifier). Please see the
-    documentation for `addNote` for an explanation of objects in the `notes` array.
+    identifiers of the created notes. In the event of any errors, all errors are gathered and returned.
+* Please see the documentation for `addNote` for an explanation of objects in the `notes` array.
 
     <details>
     <summary><i>Sample request:</i></summary>
 
     ```json
     {
-        "action": "addNotes",
-        "version": 6,
-        "params": {
-            "notes": [
-                {
-                    "deckName": "Default",
-                    "modelName": "Basic",
-                    "fields": {
-                        "Front": "front content",
-                        "Back": "back content"
-                    },
-                    "tags": [
-                        "yomichan"
-                    ],
-                    "audio": [{
-                        "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
-                        "filename": "yomichan_ねこ_猫.mp3",
-                        "skipHash": "7e2c2f954ef6051373ba916f000168dc",
-                        "fields": [
-                            "Front"
-                        ]
-                    }],
-                    "video": [{
-                        "url": "https://cdn.videvo.net/videvo_files/video/free/2015-06/small_watermarked/Contador_Glam_preview.mp4",
-                        "filename": "countdown.mp4",
-                        "skipHash": "4117e8aab0d37534d9c8eac362388bbe",
-                        "fields": [
-                            "Back"
-                        ]
-                    }],
-                    "picture": [{
-                        "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/A_black_cat_named_Tilly.jpg/220px-A_black_cat_named_Tilly.jpg",
-                        "filename": "black_cat.jpg",
-                        "skipHash": "8d6e4646dfae812bf39651b59d7429ce",
-                        "fields": [
-                            "Back"
-                        ]
-                    }]
+       "action":"addNotes",
+       "version":6,
+       "params":{
+          "notes":[
+             {
+                "deckName":"College::PluginDev",
+                "modelName":"non_existent_model",
+                "fields":{
+                   "Front":"front",
+                   "Back":"bak"
                 }
-            ]
-        }
+             },
+             {
+                "deckName":"College::PluginDev",
+                "modelName":"Basic",
+                "fields":{
+                   "Front":"front",
+                   "Back":"bak"
+                }
+             }
+          ]
+       }
     }
     ```
     </details>
@@ -3650,8 +3631,8 @@ Search parameters are passed to Anki, check the docs for more information: https
 
     ```json
     {
-        "result": [1496198395707, null],
-        "error": null
+       "result":null,
+       "error":"['model was not found: non_existent_model']"
     }
     ```
     </details>

@@ -2018,11 +2018,19 @@ class AnkiConnect:
     @util.api()
     def addNotes(self, notes):
         results = []
+        errs = []
+
         for note in notes:
             try:
                 results.append(self.addNote(note))
-            except:
-                results.append(None)
+            except Exception as e:
+                # I specifically chose to continue, so we gather all the errors of all notes (ie not break)
+                errs.append(str(e))
+
+        if errs:
+            # Roll back the changes so on error nothing happens
+            self.deleteNotes(results)
+            raise Exception(str(errs))
 
         return results
 
