@@ -2132,6 +2132,33 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```
     </details>
 
+#### `getActiveProfile`
+
+*   Retrieve the active profile.
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "getActiveProfile",
+        "version": 6
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": "User 1",
+        "error": null
+    }
+    ```
+    </details>
+
+
 #### `loadProfile`
 
 *   Selects the profile specified in request.
@@ -4147,8 +4174,8 @@ Search parameters are passed to Anki, check the docs for more information: https
 
 #### `notesInfo`
 
-*   Returns a list of objects containing for each note ID the note fields, tags, note type, modification time and the cards belonging to
-    the note.
+*   Returns a list of objects containing for each note ID the note fields, tags, note type, modification time,the cards belonging to
+    the note and the profile where the note was created.
 
     <details>
     <summary><i>Sample request:</i></summary>
@@ -4172,6 +4199,7 @@ Search parameters are passed to Anki, check the docs for more information: https
         "result": [
             {
                 "noteId":1502298033753,
+                "profile": "User_1",
                 "modelName": "Basic",
                 "tags":["tag","another_tag"],
                 "fields": {
@@ -4179,6 +4207,7 @@ Search parameters are passed to Anki, check the docs for more information: https
                     "Back": {"value": "back content", "order": 1}
                 },
                 "mod": 1718377864,
+                "cards": [1498938915662]
             }
         ],
         "error": null

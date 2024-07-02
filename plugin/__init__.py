@@ -456,7 +456,10 @@ class AnkiConnect:
     @util.api()
     def getProfiles(self):
         return self.window().pm.profiles()
-
+    
+    @util.api()
+    def getActiveProfile(self):
+        return self.window().pm.name
 
     @util.api()
     def loadProfile(self, name):
@@ -1696,6 +1699,7 @@ class AnkiConnect:
 
                 result.append({
                     'noteId': note.id,
+                    'profile': self.window().pm.name,
                     'tags' : note.tags,
                     'fields': fields,
                     'modelName': model['name'],
