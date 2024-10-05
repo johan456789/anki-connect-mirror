@@ -829,7 +829,7 @@ class AnkiConnect:
         pictureObjectOrList = note.get('picture')
         self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
 
-        ankiNote.flush()
+        self.collection().update_note(ankiNote, skip_undo_entry=True);
 
 
     @util.api()
@@ -893,8 +893,8 @@ class AnkiConnect:
         # Update the tags
         anki_note.tags = new_tags
 
-        # Flush changes to ensure they are saved
-        anki_note.flush()
+        # Update note to ensure changes are saved
+        collection.update_note(anki_note, skip_undo_entry=True);
 
     @util.api()
     def updateNoteTags(self, note, tags):
@@ -948,7 +948,7 @@ class AnkiConnect:
             if note.has_tag(tag_to_replace):
                 note.remove_tag(tag_to_replace)
                 note.add_tag(replace_with_tag)
-                note.flush()
+                self.collection().update_note(note, skip_undo_entry=True);
 
         self.window().requireReset()
         self.window().progress.finish()
@@ -965,7 +965,7 @@ class AnkiConnect:
             if note.has_tag(tag_to_replace):
                 note.remove_tag(tag_to_replace)
                 note.add_tag(replace_with_tag)
-                note.flush()
+                self.collection().update_note(note, skip_undo_entry=True);
 
         self.window().requireReset()
         self.window().progress.finish()
@@ -984,7 +984,7 @@ class AnkiConnect:
 
             couldSetEaseFactors.append(True)
             ankiCard.factor = easeFactors[i]
-            ankiCard.flush()
+            self.collection().update_card(ankiCard, skip_undo_entry=True)
 
         return couldSetEaseFactors
 
@@ -1014,7 +1014,7 @@ class AnkiConnect:
             ankiCard = self.getCard(card)
             for i, key in enumerate(keys):
                 setattr(ankiCard, key, newValues[i])
-            ankiCard.flush()
+            self.collection().update_card(ankiCard, skip_undo_entry=True)
             result.append(True)
         except Exception as e:
             result.append([False, str(e)])
