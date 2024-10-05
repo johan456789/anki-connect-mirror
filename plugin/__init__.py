@@ -311,7 +311,7 @@ class AnkiConnect:
         val = note.fields[0]
         if not val.strip():
             return 1
-        csum = anki.utils.fieldChecksum(val)
+        csum = anki.utils.field_checksum(val)
 
         # Create dictionary of deck ids
         dids = None
@@ -568,7 +568,7 @@ class AnkiConnect:
         self.startEditing()
 
         did = self.collection().decks.id(deck)
-        mod = anki.utils.intTime()
+        mod = anki.utils.int_time()
         usn = self.collection().usn()
 
         # normal cards
@@ -613,7 +613,7 @@ class AnkiConnect:
         collection = self.collection()
 
         config['id'] = str(config['id'])
-        config['mod'] = anki.utils.intTime()
+        config['mod'] = anki.utils.int_time()
         config['usn'] = collection.usn()
         if int(config['id']) not in [c['id'] for c in collection.decks.all_config()]:
             return False
