@@ -359,13 +359,13 @@ class AnkiConnect:
 
     def getCard(self, card_id: int) -> Card:
         try:
-            return self.collection().getCard(card_id)
+            return self.collection().get_card(card_id)
         except NotFoundError:
             self.raiseNotFoundError('Card was not found: {}'.format(card_id))
 
     def getNote(self, note_id: int) -> Note:
         try:
-            return self.collection().getNote(note_id)
+            return self.collection().get_note(note_id)
         except NotFoundError:
             self.raiseNotFoundError('Note was not found: {}'.format(note_id))
 
