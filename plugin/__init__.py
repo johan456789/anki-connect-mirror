@@ -15,7 +15,7 @@
 
 import aqt
 
-required_anki_version = (26, 6, 3)
+required_anki_version = (24, 6, 3)
 anki_version = tuple(int(segment) for segment in aqt.appVersion.split("."))
 
 if anki_version < required_anki_version:
