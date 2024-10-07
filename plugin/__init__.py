@@ -820,14 +820,7 @@ class AnkiConnect:
             if name in ankiNote:
                 ankiNote[name] = value
 
-        audioObjectOrList = note.get('audio')
-        self.addMedia(ankiNote, audioObjectOrList, util.MediaType.Audio)
-
-        videoObjectOrList = note.get('video')
-        self.addMedia(ankiNote, videoObjectOrList, util.MediaType.Video)
-
-        pictureObjectOrList = note.get('picture')
-        self.addMedia(ankiNote, pictureObjectOrList, util.MediaType.Picture)
+        self.addMediaFromNote(ankiNote, note)
 
         self.collection().update_note(ankiNote, skip_undo_entry=True);
 
