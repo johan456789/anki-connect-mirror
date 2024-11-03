@@ -1648,6 +1648,11 @@ class AnkiConnect:
         return result
 
 
+    @util.api()
+    def setDueDate(self, cards, days):
+        self.scheduler().set_due_date(cards, days, config_key=None)
+        return True
+
 
     @util.api()
     def reloadCollection(self):
@@ -1673,7 +1678,13 @@ class AnkiConnect:
 
 
     @util.api()
-    def notesInfo(self, notes):
+    def notesInfo(self, notes=None, query=None):
+        if notes is None and query is None:
+            raise Exception('Must provide either "notes" or a "query"')
+        
+        if query is not None:
+            notes = self.findNotes(query)
+
         result = []
         for nid in notes:
             try:
