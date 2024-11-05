@@ -1560,6 +1560,7 @@ class AnkiConnect:
                     'left': card.left,
                     'mod': card.mod,
                     'nextReviews': list(nextReviews),
+                    'flags': card.flags,
                 })
             except NotFoundError:
                 # Anki will give a NotFoundError if the card ID does not exist.
