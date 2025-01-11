@@ -770,6 +770,39 @@ Search parameters are passed to Anki, check the docs for more information: https
     ```
     </details>
 
+#### `setDueDate`
+
+*   Set Due Date. Turns cards into review cards if they are new, and makes them due on a certain date.
+    * 0 = today
+    * 1! = tomorrow + change interval to 1
+    * 3-7 = random choice of 3-7 days
+
+    <details>
+    <summary><i>Sample request:</i></summary>
+
+    ```json
+    {
+        "action": "setDueDate",
+        "version": 6,
+        "params": {
+            "cards": [1498938915662, 1502098034048],
+            "days": "3-7"
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample result:</i></summary>
+
+    ```json
+    {
+        "result": true,
+        "error": null
+    }
+    ```
+    </details>
+
 ---
 
 ### Deck Actions
@@ -4178,7 +4211,7 @@ Search parameters are passed to Anki, check the docs for more information: https
     the note and the profile where the note was created.
 
     <details>
-    <summary><i>Sample request:</i></summary>
+    <summary><i>Sample request (note ids):</i></summary>
 
     ```json
     {
@@ -4186,6 +4219,20 @@ Search parameters are passed to Anki, check the docs for more information: https
         "version": 6,
         "params": {
             "notes": [1502298033753]
+        }
+    }
+    ```
+    </details>
+
+    <details>
+    <summary><i>Sample request (query):</i></summary>
+
+    ```json
+    {
+        "action": "notesInfo",
+        "version": 6,
+        "params": {
+            "query": "deck:current"
         }
     }
     ```
