@@ -91,3 +91,7 @@ def setting(key):
 def patch_anki_2_1_50_having_null_stdout_on_windows():
     if sys.stdout is None:
         sys.stdout = open(os.devnull, "w", encoding="utf8")
+
+
+def batches(lst, size):
+    return [lst[i:i + size] for i in range(0, len(lst), size)]
