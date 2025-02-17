@@ -1641,7 +1641,7 @@ class AnkiConnect:
 
         cid_to_reviews = {}
         # 999 is the maximum number of variables sqlite allows
-        for cid_batch in util.batches(cards, 999):
+        for cid_batch in util.batched(cards, 999):
             placeholders = ','.join('?' * len(cid_batch))
 
             cid_reviews = self.collection().db.all('select {} from revlog where cid in ({})'.format(', '.join(COLUMNS), placeholders), *cid_batch)
