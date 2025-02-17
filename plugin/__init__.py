@@ -1697,7 +1697,7 @@ class AnkiConnect:
 
         nid_to_card_ids = {}
         # 999 is the maximum number of variables sqlite allows
-        for nid_batch in util.batches(notes, 999):
+        for nid_batch in util.batched(notes, 999):
             placeholders = ','.join('?' * len(nid_batch))
 
             cid_and_nids = self.collection().db.all('select id, nid from cards where nid in ({}) order by ord'.format(placeholders), *nid_batch)
