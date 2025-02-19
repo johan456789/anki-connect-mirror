@@ -17,5 +17,5 @@ jobs:
         id: mirror
         uses: bridgelightcloud/github-mirror-action@v3
         with:
-          origin: ''
+          origin: 'https://git.sr.ht/~foosoft/anki-connect'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
