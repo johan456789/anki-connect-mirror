@@ -4,7 +4,6 @@ on:
     branches:
         - __mirror
   schedule:
-    # Run everyday at 3 AM UTC
     - cron: '0 3 * * *'
   workflow_dispatch:
 
@@ -13,9 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     name: mirror
     steps:
+      # First mirror to __mirror branch
       - name: mirror
         id: mirror
         uses: bridgelightcloud/github-mirror-action@v3
         with:
           origin: 'https://git.sr.ht/~foosoft/anki-connect'
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+          branch: '__mirror'  # Explicitly set mirror branch
+
+      # Then sync contents to master (optional additional step)
+      - name: Checkout master
+        uses: actions/checkout@v3
+        with:
+          ref: master
+          
+      - name: Sync specific contents
+        run: |
+          git fetch origin __mirror
+          # Copy everything except .github directory
+          git checkout origin/__mirror -- ':!.github'
+          git commit -m "Sync content from mirror"
+          git push
