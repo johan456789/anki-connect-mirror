@@ -1,0 +1,40 @@
+name: 'mirror'
+on:
+  push:
+    branches:
+        - __mirror
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    name: mirror
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ___mirror
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Mirror Repository
+        id: mirror
+        uses: bridgelightcloud/github-mirror-action@v3
+        with:
+          origin: 'https://git.sr.ht/~foosoft/anki-connect'
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+
+      - name: Merge Workflow File
+        run: |
+          git fetch origin ___mirror
+          git checkout master
+          git merge ___mirror --no-ff -m "Merge workflow file from ___mirror branch"
+          git push origin master
