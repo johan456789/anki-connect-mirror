@@ -18,9 +18,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          GH_PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
           git clone --mirror "$ORIGIN_URL" mirror.git
           cd mirror.git
           DEFAULT_BRANCH="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+          git push "$GH_PUSH_URL" \
             "refs/heads/${DEFAULT_BRANCH}:refs/heads/mirror" --force
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" --tags --force
+          git push "$GH_PUSH_URL" --tags --force
+          cd ..
+
+          git clone "$GH_PUSH_URL" repo
+          cd repo
+          git fetch origin mirror
+          git checkout master
+          git rebase origin/mirror
+          git push origin master
