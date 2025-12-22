@@ -34,4 +34,4 @@ jobs:
           git fetch origin mirror
           git checkout master
           git rebase origin/mirror
-          git push origin master
+          git push --force-with-lease origin master
