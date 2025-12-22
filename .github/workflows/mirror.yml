@@ -19,19 +19,14 @@ jobs:
         run: |
           set -euo pipefail
           GH_PUSH_URL="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
-          git clone --mirror "$ORIGIN_URL" mirror.git
-          cd mirror.git
-          DEFAULT_BRANCH="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
-          git push "$GH_PUSH_URL" \
-            "refs/heads/${DEFAULT_BRANCH}:refs/heads/mirror" --force
-          git push "$GH_PUSH_URL" --tags --force
-          cd ..
-
           git clone "$GH_PUSH_URL" repo
           cd repo
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin mirror
+          git remote add upstream "$ORIGIN_URL"
+          git fetch upstream --tags
+          DEFAULT_BRANCH="$(git remote show upstream | awk '/HEAD branch/ {print $NF}')"
           git checkout master
-          git rebase origin/mirror
+          git rebase "upstream/${DEFAULT_BRANCH}"
           git push --force-with-lease origin master
+          git push --tags --force
