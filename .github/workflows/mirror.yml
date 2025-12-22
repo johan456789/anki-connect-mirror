@@ -1,0 +1,26 @@
+name: 'mirror'
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Runs at 3 AM UTC weekly (Sunday)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: mirror
+        env:
+          ORIGIN_URL: 'https://git.sr.ht/~foosoft/anki-connect'
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --mirror "$ORIGIN_URL" mirror.git
+          cd mirror.git
+          DEFAULT_BRANCH="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+            "refs/heads/${DEFAULT_BRANCH}:refs/heads/mirror" --force
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" --tags --force
