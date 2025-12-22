@@ -29,6 +29,8 @@ jobs:
 
           git clone "$GH_PUSH_URL" repo
           cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin mirror
           git checkout master
           git rebase origin/mirror
