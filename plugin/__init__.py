@@ -507,7 +507,31 @@ class AnkiConnect:
         out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
         accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
         if out.required not in accepted_sync_statuses:
-            raise Exception(f"Sync status {out.required} not one of {accepted_sync_statuses} - see SyncCollectionResponse.ChangesRequired for list of sync statuses: https://github.com/ankitects/anki/blob/e41c4573d789afe8b020fab5d9d1eede50c3fa3d/proto/anki/sync.proto#L57-L65")
+            return "conflict"
+        mw.onSync()
+
+
+    @util.api()
+    def forceUpload(self):
+        mw = self.window()
+        auth = mw.pm.sync_auth()
+        if not auth:
+            raise Exception("sync: auth not configured")
+        mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.FULL_UPLOAD)
+        out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
+        mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.NORMAL)
+        mw.onSync()
+
+
+    @util.api()
+    def forceDownload(self):
+        mw = self.window()
+        auth = mw.pm.sync_auth()
+        if not auth:
+            raise Exception("sync: auth not configured")
+        mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.FULL_DOWNLOAD)
+        out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
+        mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.NORMAL)
         mw.onSync()
 
 
@@ -1810,6 +1834,19 @@ class AnkiConnect:
             browser.table._on_sort_column_changed(columnId, cardOrder)
 
         return self.findCards(query)
+
+
+    @util.api()
+    def repositionCards(self, cards, start):
+        self.startEditing()
+        self.collection().sched.reposition_new_cards(
+            cids=cards,
+            starting_from=start,
+            step_size=1,
+            randomize=False,
+            shift_existing=True,
+        )
+        return True
 
 
     @util.api()
