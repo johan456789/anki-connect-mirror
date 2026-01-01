@@ -32,6 +32,59 @@ def test_apiReflect(setup):
     }
 
 
+def test_sync(monkeypatch):
+    class MockSyncResult:
+        required = 0
+
+    monkeypatch.setattr(ac.window().col, "sync_collection", lambda a, b: MockSyncResult())
+    assert ac.sync() is None
+
+    MockSyncResult.required = 1
+    assert ac.sync() is None
+
+    MockSyncResult.required = 2
+    assert ac.sync() == "conflict"
+
+
+from unittest.mock import Mock, call
+import anki
+
+def test_forceUpload(monkeypatch):
+    class MockSyncResult:
+        required = 0
+
+    mock_set_sync_force_direction = Mock()
+    monkeypatch.setattr(ac.window().col, "sync_collection", lambda a, b: MockSyncResult())
+    monkeypatch.setattr(ac.window().col, "set_sync_force_direction", mock_set_sync_force_direction)
+    assert ac.forceUpload() is None
+    mock_set_sync_force_direction.assert_has_calls([
+        call(anki.rsbackend_pb2.SyncAuth.FULL_UPLOAD),
+        call(anki.rsbackend_pb2.SyncAuth.NORMAL)
+    ])
+
+    MockSyncResult.required = 2
+    with pytest.raises(Exception, match="Sync failed"):
+        ac.forceUpload()
+
+
+def test_forceDownload(monkeypatch):
+    class MockSyncResult:
+        required = 0
+
+    mock_set_sync_force_direction = Mock()
+    monkeypatch.setattr(ac.window().col, "sync_collection", lambda a, b: MockSyncResult())
+    monkeypatch.setattr(ac.window().col, "set_sync_force_direction", mock_set_sync_force_direction)
+    assert ac.forceDownload() is None
+    mock_set_sync_force_direction.assert_has_calls([
+        call(anki.rsbackend_pb2.SyncAuth.FULL_DOWNLOAD),
+        call(anki.rsbackend_pb2.SyncAuth.NORMAL)
+    ])
+
+    MockSyncResult.required = 2
+    with pytest.raises(Exception, match="Sync failed"):
+        ac.forceDownload()
+
+
 class TestProfiles:
     def test_getProfiles(self, session_with_profile_loaded):
         result = ac.getProfiles()

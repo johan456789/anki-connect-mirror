@@ -520,6 +520,9 @@ class AnkiConnect:
         mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.FULL_UPLOAD)
         out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
         mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.NORMAL)
+        accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
+        if out.required not in accepted_sync_statuses:
+            raise Exception("Sync failed")
         mw.onSync()
 
 
@@ -532,6 +535,9 @@ class AnkiConnect:
         mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.FULL_DOWNLOAD)
         out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
         mw.col.set_sync_force_direction(anki.rsbackend_pb2.SyncAuth.NORMAL)
+        accepted_sync_statuses = [out.NO_CHANGES, out.NORMAL_SYNC]
+        if out.required not in accepted_sync_statuses:
+            raise Exception("Sync failed")
         mw.onSync()
 
 

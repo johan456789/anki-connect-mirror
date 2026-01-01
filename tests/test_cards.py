@@ -91,3 +91,9 @@ class TestAnswerCards:
         ac.scheduler().reset()
         result = ac.answerCards([{"cardId": 123, "ease": 2}])
         assert result == [False]
+
+
+def test_repositionCards(setup):
+    assert ac.repositionCards(cards=setup.card_ids, start=100) is True
+    result = ac.cardsInfo(cards=setup.card_ids)
+    assert [item["due"] for item in result] == [100, 101, 102, 103]
