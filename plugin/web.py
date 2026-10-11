@@ -33,6 +33,9 @@ class WebClient:
         if not self.pending and time.monotonic() - self.started > 10:
             self.close()
             return False
+        # Windows select() rejects empty socket lists while accepted work waits.
+        if self.pending and not self.writeBuff:
+            return True
         rlist, wlist = select.select([self.sock] if not self.pending and not self.writeBuff else [], [self.sock] if self.writeBuff else [], [], 0)[:2]
         if rlist:
             try:

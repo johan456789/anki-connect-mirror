@@ -123,7 +123,9 @@ def test_http_idle_timeout_tracks_progress_and_waits_for_accepted_work(monkeypat
             assert client.advance()
         assert client.pending
         now[0] = 1000
-        assert client.advance()  # Accepted work has no implicit deadline.
+        with monkeypatch.context() as waiting:
+            waiting.setattr(web.select, 'select', lambda *args: pytest.fail('Pending work must not poll sockets.'))
+            assert client.advance()  # Accepted work has no implicit deadline.
         pending.resolve(b'HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n')
         now[0] = 1001
         assert not client.advance()  # Reply receives a fresh write deadline.
@@ -140,9 +142,13 @@ def test_http_stalled_response_times_out(monkeypatch):
     monkeypatch.setattr(web.time, 'monotonic', lambda: now[0])
     server_socket, peer = socket.socketpair()
     server_socket.setblocking(False)
-    # Restrict the native socket buffer; the peer deliberately never reads.
+    # Limit each native write: Windows may buffer the whole response despite
+    # SO_SNDBUF, so the buffer size alone cannot guarantee a pending reply.
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 4096)
-    client = web.WebClient(server_socket, lambda request: completed(b'x' * 1048576))
+    transport = SimpleNamespace(fileno=server_socket.fileno, recv=server_socket.recv,
+                                send=lambda data: server_socket.send(data[:4096]),
+                                close=server_socket.close)
+    client = web.WebClient(transport, lambda request: completed(b'x' * 1048576))
     try:
         peer.sendall(b'POST / HTTP/1.1\r\nContent-Length: 0\r\n\r\n')
         assert client.advance()
