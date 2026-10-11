@@ -973,6 +973,88 @@
       ],
       "legacy": [],
       "notes": "Native corrupt-package import and missing-directory export produce ioError while the collection remains usable."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_note_errors_keep_client_compatible_wording",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNote",
+        "canAddNoteWithErrorDetail",
+        "canAddNotes",
+        "canAddNotesWithErrorDetail"
+      ],
+      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_batch_duplicate_and_empty_question_errors",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail"
+      ],
+      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_duplicate_option_errors",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "canAddNoteWithErrorDetail"
+      ],
+      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_shared_errors_keep_historical_wording",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "apiReflect",
+        "createModel",
+        "deckNameFromId",
+        "deleteDecks",
+        "findModelsById",
+        "findModelsByName",
+        "getDecks",
+        "modelFieldNames",
+        "modelFieldRename",
+        "modelFieldSetDescription",
+        "modelFieldSetFont",
+        "modelFieldSetFontSize",
+        "modelNameFromId",
+        "modelTemplateRemove",
+        "notesInfo",
+        "storeMediaFile",
+        "updateNote",
+        "updateNoteFields",
+        "updateNoteModel",
+        "updateNoteTags"
+      ],
+      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_model_conversion_missing_target_error",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "updateNoteModel"
+      ],
+      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
     }
   ],
   "unreferenced": {

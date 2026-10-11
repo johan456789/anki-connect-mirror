@@ -28,6 +28,122 @@ def legacy_note(front):
     return {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': front, 'Back': 'answer'}}
 
 
+@pytest.mark.parametrize('failure,message', [
+    ('duplicate', 'cannot create note because it is a duplicate'),
+    ('empty', 'cannot create note because it is empty'),
+    ('model', 'model was not found: Missing'),
+    ('deck', 'deck was not found: Missing'),
+])
+def test_legacy_note_errors_keep_client_compatible_wording(native, failure, message):
+    owner, service = native
+    old(native, 'addNote', note=legacy_note('existing'))
+    source = legacy_note('existing' if failure == 'duplicate' else '' if failure == 'empty' else 'new')
+    # Yomitan sends only the first field when checking for duplicates.
+    source['fields'].pop('Back')
+    if failure in ('model', 'deck'):
+        source['modelName' if failure == 'model' else 'deckName'] = 'Missing'
+    expected = {'canAdd': False, 'error': message}
+    assert old(native, 'canAddNoteWithErrorDetail', note=source) == expected
+    assert old(native, 'canAddNotesWithErrorDetail', notes=[source]) == [expected]
+    assert old(native, 'canAddNote', note=source) is False
+    assert old(native, 'canAddNotes', notes=[source]) == [False]
+    for action, params in [('addNote', {'note': source}), ('addNotes', {'notes': [legacy_note('new'), source]})]:
+        with pytest.raises(ApiError) as caught:
+            old(native, action, **params)
+        assert str(caught.value) == message
+    assert service.col.note_count() == 1
+    if failure == 'duplicate':
+        result = call(service, 'notes.validate', note=note_input('existing'))
+        assert result['issues'] == [{'type': 'duplicate', 'message': 'A matching note exists.'}]
+        assert result['duplicateNoteIds']
+        with pytest.raises(ApiError) as caught:
+            call(service, 'notes.create', **note_input('existing'))
+        assert str(caught.value) == 'Note cannot be created.'
+
+
+def test_legacy_batch_duplicate_and_empty_question_errors(native):
+    owner, service = native
+    with pytest.raises(ApiError) as caught:
+        old(native, 'addNotes', notes=[legacy_note('batch'), legacy_note('batch')])
+    assert str(caught.value) == 'cannot create note because it is a duplicate'
+    assert caught.value.details['items'][0]['error']['data']['details']['issues'][0]['type'] == 'duplicate'
+    model = service.col.models.by_name('Basic')
+    model['tmpls'][0]['qfmt'] = '{{Back}}'
+    service.col.models.save(model)
+    source = legacy_note('nonempty first field')
+    source['fields']['Back'] = ''
+    message = 'The field values you have provided would make an empty question on all cards.'
+    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': False, 'error': message}
+    with pytest.raises(ApiError) as caught:
+        old(native, 'addNote', note=source)
+    assert str(caught.value) == message
+    assert service.col.note_count() == 0
+
+
+@pytest.mark.parametrize('options,label', [
+    ({'allowDuplicate': 1}, 'allowDuplicate'),
+    ({'duplicateScopeOptions': {'checkChildren': 'false'}}, 'duplicateScopeOptions.checkChildren'),
+    ({'duplicateScopeOptions': {'checkAllModels': 0}}, 'duplicateScopeOptions.checkAllModels'),
+])
+def test_legacy_duplicate_option_errors(native, options, label):
+    source = {**legacy_note('new'), 'options': options}
+    message = 'option parameter "' + label + '" must be boolean'
+    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': False, 'error': message}
+    with pytest.raises(ApiError) as caught:
+        old(native, 'addNote', note=source)
+    assert str(caught.value) == message
+
+
+@pytest.mark.parametrize('action,params,message', [
+    ('modelFieldNames', {'modelName': 'Missing'}, 'model was not found: Missing'),
+    ('modelNameFromId', {'modelId': 999}, 'model was not found: 999'),
+    ('findModelsByName', {'modelNames': ['Missing']}, 'model was not found: Missing'),
+    ('findModelsById', {'modelIds': [999]}, 'model was not found: 999'),
+    ('deckNameFromId', {'deckId': 999}, 'deck was not found: 999'),
+    ('getDecks', {'cards': [999]}, 'Card was not found: 999'),
+    ('modelFieldRename', {'modelName': 'Basic', 'oldFieldName': 'Missing', 'newFieldName': 'New'},
+     'field was not found in Basic: Missing'),
+    ('modelTemplateRemove', {'modelName': 'Basic', 'templateName': 'Missing'},
+     'template was not found in Basic: Missing'),
+    ('modelFieldSetFont', {'modelName': 'Basic', 'fieldName': 'Front', 'font': 1}, 'font should be a string: 1'),
+    ('modelFieldSetFontSize', {'modelName': 'Basic', 'fieldName': 'Front', 'fontSize': 'big'},
+     'fontSize should be an integer: big'),
+    ('modelFieldSetDescription', {'modelName': 'Basic', 'fieldName': 'Front', 'description': 1},
+     'description should be a string: 1'),
+    ('createModel', {'modelName': 'Basic', 'inOrderFields': ['Front'],
+                     'cardTemplates': [{'Name': 'Card', 'Front': '{{Front}}', 'Back': '{{Front}}'}]},
+     'Model name already exists'),
+    ('createModel', {'modelName': 'New', 'inOrderFields': [], 'cardTemplates': []},
+     'Must provide at least one field for inOrderFields'),
+    ('createModel', {'modelName': 'New', 'inOrderFields': ['Front'], 'cardTemplates': []},
+     'Must provide at least one card for cardTemplates'),
+    ('updateNote', {'note': {'id': 999}}, 'Must provide a "fields" or "tags" property.'),
+    ('updateNoteFields', {'note': {'id': 999, 'fields': {'Front': 'new'}}}, 'Note was not found: 999'),
+    ('updateNoteTags', {'note': 999, 'tags': [1]}, 'Must provide tags as a list of strings'),
+    ('updateNoteModel', {'note': {}}, 'Note ID is required'),
+    ('updateNoteModel', {'note': {'id': 999}}, 'Model name is required'),
+    ('updateNoteModel', {'note': {'id': 999, 'modelName': 'Basic'}}, 'Fields must be provided as a dictionary'),
+    ('notesInfo', {}, 'Must provide either "notes" or a "query"'),
+    ('deleteDecks', {'decks': ['Default']},
+     "Since Anki 2.1.28 it's not possible to delete decks without deleting cards as well"),
+    ('apiReflect', {'scopes': 'actions'}, 'scopes has invalid value'),
+    ('apiReflect', {'scopes': ['actions'], 'actions': 'addNote'}, 'actions has invalid value'),
+    ('storeMediaFile', {'filename': 'missing.txt'}, 'You must provide a "data", "path", or "url" field.'),
+])
+def test_legacy_shared_errors_keep_historical_wording(native, action, params, message):
+    with pytest.raises(ApiError) as caught:
+        old(native, action, **params)
+    assert str(caught.value) == message
+
+
+def test_legacy_model_conversion_missing_target_error(native):
+    id = old(native, 'addNote', note=legacy_note('convert'))
+    with pytest.raises(ApiError) as caught:
+        old(native, 'updateNoteModel', note={'id': id, 'modelName': 'Missing', 'fields': {'Front': 'new'}})
+    assert str(caught.value) == "Model 'Missing' not found"
+    assert native[1].col.get_note(id)['Front'] == 'convert'
+
+
 def test_v1_bulk_reads_validation_and_atomic_creation(native):
     owner, service = native
     inputs = [note_input('first'), note_input('second')]

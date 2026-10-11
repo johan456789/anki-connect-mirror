@@ -163,6 +163,13 @@ optional MD5 digest of incoming bytes to skip. Acquisitions happen before owned
 media writes; media rollback is separate from the collection transaction.
 Eligibility checks do not download or write files.
 
+Legacy note validation and creation preserve the historical error strings:
+`cannot create note because it is a duplicate` for duplicates and
+`cannot create note because it is empty` for an empty first field. Clients such
+as Yomitan use the duplicate wording to recognize existing notes. Missing models
+and decks report `model was not found: NAME` and `deck was not found: NAME`.
+The v1 API retains its structured validation issues.
+
 ## Card Actions
 
 ### `getEaseFactors`
@@ -2781,6 +2788,12 @@ objects with fields `canAdd` and `error`.
 
 * `canAdd` indicates whether or not the parameters at the corresponding index could be used to create a new note.
 * `error` contains an explanation of why a note cannot be added.
+
+For an existing duplicate, the result entry is:
+
+```json
+{"canAdd": false, "error": "cannot create note because it is a duplicate"}
+```
 
 **Parameters:** `canAddNotesWithErrorDetail(notes)`
 

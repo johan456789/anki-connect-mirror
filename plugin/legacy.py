@@ -22,7 +22,59 @@ class Legacy:
     def s(self, method, **params):
         if self.service is None:
             self.service = self.runtime.service()
-        return self.service.execute(method, self.runtime.dispatcher.params(method, params))
+        try:
+            return self.service.execute(method, self.runtime.dispatcher.params(method, params))
+        except ApiError as error:
+            if error.kind == 'notFound':
+                # Resolve only on failure, so a missing entity keeps its legacy
+                # wording without disguising unrelated service failures.
+                source = params.get('note', params)
+                for key, kind in (('noteType', 'noteType'), ('deck', 'deck')):
+                    if key in source:
+                        self.resolve(source[key], kind)
+                if method in ('notes.get', 'notes.update'):
+                    raise ApiError(error.kind, 'Note was not found: ' + params['id'], error.details) from error
+                if method == 'cards.get':
+                    raise ApiError(error.kind, 'Card was not found: ' + params['id'], error.details) from error
+            if error.kind == 'validationFailed' and error.details:
+                message = self.validation_error(error.details)
+                if message:
+                    raise ApiError(error.kind, message, error.details) from error
+            if method == 'noteTypes.create' and error.kind == 'conflict':
+                raise ApiError(error.kind, 'Model name already exists', error.details) from error
+            raise
+
+    def resolve(self, reference, kind):
+        try:
+            return self.service.resolve(reference, kind)
+        except ApiError as error:
+            if error.kind == 'notFound':
+                label = 'model' if kind == 'noteType' else 'deck'
+                value = reference.get('name', reference.get('id'))
+                raise ApiError(error.kind, label + ' was not found: ' + str(value), error.details) from error
+            raise
+
+    @staticmethod
+    def validation_error(validation):
+        messages = {
+            'emptyFirstField': 'cannot create note because it is empty',
+            'duplicate': 'cannot create note because it is a duplicate',
+            'emptyQuestions': 'The field values you have provided would make an empty question on all cards.',
+            'missingCloze': 'cannot create note for unknown reason',
+            'notClozeNoteType': 'cannot create note for unknown reason',
+            'notClozeField': 'cannot create note for unknown reason',
+        }
+        # Legacy note creation reported the first failure. In particular, an
+        # empty first field must not be mistaken for a duplicate by clients.
+        issues = validation.get('issues', [])
+        if issues:
+            return messages.get(issues[0]['type'], issues[0]['message'])
+        for item in validation.get('items', []):
+            details = item.get('error', {}).get('data', {}).get('details', item)
+            message = Legacy.validation_error(details)
+            if message:
+                return message
+        return None
 
     def ids(self, values):
         return [str(value) for value in values]
@@ -38,7 +90,8 @@ class Legacy:
                     values.append(None)
                 else:
                     error = item['error']
-                    raise ApiError(error.get('data', {}).get('type', 'internalError'), error['message'])
+                    raise ApiError(error.get('data', {}).get('type', 'internalError'), error['message'],
+                                   error.get('data', {}).get('details'))
             else:
                 values.append(item['result'])
         return values
@@ -56,12 +109,12 @@ class Legacy:
         # Compatibility projections are snapshots, never a writable alternate service.
         if self.service is None:
             self.service = self.runtime.service()
-        service = self.service
-        return service.resolve({'id': str(id)} if id is not None else self.ref(name), 'noteType')
+        return self.resolve({'id': str(id)} if id is not None else self.ref(name), 'noteType')
 
     def created_note(self, source, pure=False):
         source = copy.deepcopy(source)
         model = self.model(source['modelName'])
+        self.resolve(self.ref(source['deckName']), 'deck')
         fields = {}
         for key, value in source['fields'].items():
             matches = [field['name'] for field in model['flds'] if field['name'].lower() == key.lower()]
@@ -70,10 +123,15 @@ class Legacy:
             if matches:
                 fields[matches[0]] = value
         options = source.get('options', {})
+        scoped = options.get('duplicateScopeOptions', {})
+        for key, values, label in (('allowDuplicate', options, 'allowDuplicate'),
+                                   ('checkChildren', scoped, 'duplicateScopeOptions.checkChildren'),
+                                   ('checkAllModels', scoped, 'duplicateScopeOptions.checkAllModels')):
+            if key in values and type(values[key]) is not bool:
+                raise ApiError('invalidParams', 'option parameter "' + label + '" must be boolean')
         scope = options.get('duplicateScope') or 'collection'
         if scope not in ('collection', 'deck'):
             raise ApiError('invalidParams', 'Unknown duplicate scope.')
-        scoped = options.get('duplicateScopeOptions', {})
         duplicates = {'allow': options.get('allowDuplicate', False), 'scope': scope,
                       'includeChildren': scoped.get('checkChildren', False),
                       'acrossNoteTypes': scoped.get('checkAllModels', False)}
@@ -90,6 +148,8 @@ class Legacy:
         import urllib.request
         from . import util
         sources = [key for key in ('data', 'path', 'url') if params.get(key) is not None]
+        if not sources:
+            raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
         if len(sources) != 1:
             raise ApiError('invalidParams', 'Provide exactly one of data, path, or url.')
         key = sources[0]
@@ -147,7 +207,7 @@ class Legacy:
         try:
             result = self.s('notes.validate', note=self.created_note(source, pure=True))
             if not result['valid']:
-                return {'canAdd': False, 'error': '; '.join(issue['message'] for issue in result['issues'])}
+                return {'canAdd': False, 'error': self.validation_error(result)}
             return {'canAdd': True}
         except Exception as error:
             return {'canAdd': False, 'error': str(error)}
@@ -156,7 +216,7 @@ class Legacy:
         prepared = [self.created_note(source, pure=True) for source in sources]
         validation = self.unwrap(self.s('notes.validateMany', notes=prepared))
         if any(not value['valid'] for value in validation):
-            raise ApiError('validationFailed', 'One or more notes failed validation.', {'items': validation})
+            raise ApiError('validationFailed', self.validation_error({'items': validation}), {'items': validation})
         # Acquire every attachment before installing any file. Back up only
         # destinations this request owns; never scan or restore unrelated media.
         staged = []
@@ -180,7 +240,7 @@ class Legacy:
                         with urllib.request.urlopen(entry['url'], timeout=util.setting('webTimeout') / 1000) as response:
                             data = response.read(67108865)
                     else:
-                        raise ApiError('invalidParams', 'Attachment needs data, path, or url.')
+                        raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
                     if len(data) > 67108864:
                         raise ApiError('invalidParams', 'Media is too large.')
                     staged.append((entry, filename, data))
@@ -401,8 +461,10 @@ class Legacy:
         if name == 'requestPermission':
             return self.owner.permission(p['origin'], p['allowed'])
         if name == 'apiReflect':
-            if not isinstance(p['scopes'], list) or not (p['actions'] is None or isinstance(p['actions'], list)):
-                raise ApiError('invalidParams', 'Invalid reflection arguments.')
+            if not isinstance(p['scopes'], list):
+                raise ApiError('invalidParams', 'scopes has invalid value')
+            if not (p['actions'] is None or isinstance(p['actions'], list)):
+                raise ApiError('invalidParams', 'actions has invalid value')
             if 'actions' not in p['scopes']:
                 return {'scopes': []}
             names = p['actions'] if p['actions'] is not None else self.owner.legacy_actions()
@@ -429,7 +491,7 @@ class Legacy:
             return None
         if name == 'deleteDecks':
             if not p['cardsToo']:
-                raise ApiError('invalidParams', 'Since Anki 2.1.28 it is not possible to delete decks without deleting cards.')
+                raise ApiError('invalidParams', "Since Anki 2.1.28 it's not possible to delete decks without deleting cards as well")
             existing = {value['name'] for value in self.s('decks.list')}
             self.unwrap(self.s('decks.delete', decks=[self.ref(name) for name in p['decks'] if name in existing], deleteCards=True))
             return None
@@ -496,6 +558,9 @@ class Legacy:
             return values if name == 'addNotes' else values[0]
         if name in ('updateNote', 'updateNoteFields', 'updateNoteTags'):
             source = p['note']
+            if name == 'updateNoteTags' and not isinstance(p['tags'], str) and (not isinstance(p['tags'], list) or
+                                            any(not isinstance(tag, str) for tag in p['tags'])):
+                raise ApiError('invalidParams', 'Must provide tags as a list of strings')
             source = {'id': source, 'tags': p['tags']} if name == 'updateNoteTags' else copy.deepcopy(source)
             patch = {}
             if 'fields' in source:
@@ -504,7 +569,7 @@ class Legacy:
             if name != 'updateNoteFields' and 'tags' in source:
                 patch['tags'] = [source['tags']] if isinstance(source['tags'], str) else list(source['tags'])
             if not patch:
-                raise ApiError('invalidParams', 'Must provide a fields or tags property.')
+                raise ApiError('invalidParams', 'Must provide a "fields" or "tags" property.')
             self.runtime.dispatcher.params('notes.update', {'id': str(source['id']), 'patch': patch})
             if 'fields' in patch:
                 self.attachments(patch['fields'], source)
@@ -512,8 +577,19 @@ class Legacy:
             return None
         if name == 'updateNoteModel':
             source = p['note']
+            if not source.get('id'):
+                raise ApiError('invalidParams', 'Note ID is required')
+            if not source.get('modelName'):
+                raise ApiError('invalidParams', 'Model name is required')
+            if not source.get('fields') or not isinstance(source['fields'], dict):
+                raise ApiError('invalidParams', 'Fields must be provided as a dictionary')
             original = self.s('notes.get', id=str(source['id']))
-            target = self.s('noteTypes.get', noteType=self.ref(source['modelName']))
+            try:
+                target = self.s('noteTypes.get', noteType=self.ref(source['modelName']))
+            except ApiError as error:
+                if error.kind == 'notFound':
+                    raise ApiError(error.kind, "Model '" + source['modelName'] + "' not found", error.details) from error
+                raise
             plan = self.s('notes.planConversion', source={'id': original['noteType']['id']}, target={'id': target['id']})
             old = self.model(id=original['noteType']['id'])
             for key, mapping in [('flds', plan['fields']), ('tmpls', plan['templates'])]:
@@ -554,7 +630,7 @@ class Legacy:
             if name == 'notesInfo' and p['query'] is not None:
                 ids = self.all_pages('notes.search', query=p['query'])
             if ids is None:
-                raise ApiError('invalidParams', 'Must provide notes or query.')
+                raise ApiError('invalidParams', 'Must provide either "notes" or a "query"')
             result = []
             for id in ids:
                 try:
@@ -788,6 +864,10 @@ class Legacy:
         if name in ('findModelsById', 'findModelsByName'):
             return [self.model(id=id) for id in p['modelIds']] if name == 'findModelsById' else [self.model(name=value) for value in p['modelNames']]
         if name == 'createModel':
+            if not p['inOrderFields']:
+                raise ApiError('invalidParams', 'Must provide at least one field for inOrderFields')
+            if not p['cardTemplates']:
+                raise ApiError('invalidParams', 'Must provide at least one card for cardTemplates')
             templates = [{'name': template.get('Name', 'Card ' + str(index + 1)), 'questionHtml': template['Front'], 'answerHtml': template['Back']}
                          for index, template in enumerate(p['cardTemplates'])]
             css = p['css'] if p['css'] is not None else self.service.col.models.new(p['modelName'])['css']
@@ -856,5 +936,21 @@ class Legacy:
         else:
             raise ApiError('methodNotFound', 'Unknown note type action.')
         if edits:
+            model = self.model(p.get('modelName', p.get('model', {}).get('name')))
+            names = {'field': {value['name'] for value in model['flds']},
+                     'template': {value['name'] for value in model['tmpls']}}
+            for edit in edits:
+                kind = 'field' if edit['op'].endswith('Field') else 'template'
+                if edit['op'].startswith('add'):
+                    names[kind].add(edit[kind]['name'])
+                    continue
+                if edit['name'] not in names[kind]:
+                    raise ApiError('notFound', kind + ' was not found in ' + model['name'] + ': ' + edit['name'])
+            if name in ('modelFieldSetFont', 'modelFieldSetFontSize', 'modelFieldSetDescription'):
+                key, expected, label = {'modelFieldSetFont': ('font', str, 'a string'),
+                                        'modelFieldSetFontSize': ('fontSize', int, 'an integer'),
+                                        'modelFieldSetDescription': ('description', str, 'a string')}[name]
+                if not isinstance(p[key], expected):
+                    raise ApiError('invalidParams', key + ' should be ' + label + ': ' + str(p[key]))
             self.s('noteTypes.editStructure', noteType=ref, edits=edits)
         return True if name == 'modelFieldSetDescription' else None
