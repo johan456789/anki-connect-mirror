@@ -103,13 +103,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for API changes, tests, and review guidel
 [api-v1.schema.json](api-v1.schema.json) for the machine-readable contract.
 
 To install from source, download or clone this repository and run
-`python3 tools/package_addon.py` (or `python tools/package_addon.py` on Windows).
+`make package` (or `python tools/package_addon.py` on Windows).
 In Anki, choose **Tools → Add-ons → Install from file**, select the generated
 `AnkiConnect.zip`, and restart Anki. The ZIP replaces the existing Anki-Connect
 add-on code while retaining its saved configuration.
 
-For development on Linux or macOS, `./link.sh` links `plugin/` into an existing
+For development on Linux or macOS, `make link` links `plugin/` into an existing
 Anki add-ons directory. Use temporary profiles and collections when testing.
-Run `./test.sh` or `.\test.ps1` on Windows for the Anki compatibility matrix,
-including GUI scenarios. To skip GUI scenarios, use `./test.sh --no-ui` or
-`.\test.ps1 -NoUI`.
+Run `make test` or `.\tools\test.ps1` on Windows for the Anki compatibility matrix,
+including GUI scenarios. To skip GUI scenarios, use `make test-unit` or
+`.\tools\test.ps1 -NoUI`.
+
+Run `make help` for all development commands. Use `make test VERSIONS="26.9.3"`
+to select Anki versions. The runners cache dependencies and interpreters in
+`.test-cache/` at the repository root. `make check` runs contract, API documentation,
+coverage, and syntax checks in your current Python environment; select an
+environment with `make check PYTHON=/path/to/python`. Use `make contract` to
+regenerate the bundled contract. The Make targets use the scripts in `tools/`,
+which can also be run directly without Make.

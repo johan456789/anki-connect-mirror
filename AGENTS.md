@@ -31,11 +31,12 @@ documenting a change.
 - `tests_api/`: default native collection and admission regression tests.
 - `API_TEST_COVERAGE.md`: every public method's reviewed test evidence and gaps;
   generated from `tests_api/api_coverage.json` by `tools/check_api_coverage.py --write`.
-- `test.sh` and `test.ps1`: cached Anki version matrix for both APIs on Unix and Windows.
+- `Makefile`: development entry points; run `make help` for available commands.
+- `tools/test.sh` and `tools/test.ps1`: cached Anki version matrix for both APIs on Unix and Windows.
 - `tools/smoke_gui.py`: GUI scenarios with disposable profiles.
-- `link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
+- `tools/link.sh`: links `plugin/` into an existing Linux or macOS Anki add-ons folder
   as `AnkiConnectDev`.
-- `package.sh`: creates `AnkiConnect.zip` through the nondestructive Python builder.
+- `tools/package.sh`: creates `AnkiConnect.zip` through the nondestructive Python builder.
 
 ## Making changes
 
@@ -68,9 +69,9 @@ completion/lifecycle checks across versions. Protocol checks are supplementary;
 do not require HTTP coverage per method. Exceedingly difficult GUI effects may be
 deferred in the coverage inventory with a reason and a practical alternative.
 
-Run `./test.sh` for the cached version matrix, including UI scenarios by default.
-On Windows, run `.\test.ps1`; `-NoUI` skips UI scenarios.
-Use `./test.sh --no-ui` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
+Run `make test` for the cached version matrix, including UI scenarios by default.
+On Windows, run `.\tools\test.ps1`; `-NoUI` skips UI scenarios.
+Use `make test-unit` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.
 
@@ -85,7 +86,7 @@ git diff --check
 ```
 
 Native tests use disposable collections; controlled admission tests do not
-certify real GUI completion. GUI scenarios use a working display and run by default through `test.sh`:
+certify real GUI completion. GUI scenarios use a working display and run by default through `make test`:
 `python tools/smoke_gui.py all`. They create temporary profiles, use no sync
 credentials, and isolate processes. Check the output for Qt/JavaScript failures;
 the exit scenario checks HTTP reply delivery before native shutdown. Network sync needs a disposable account.

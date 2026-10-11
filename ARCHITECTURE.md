@@ -103,10 +103,10 @@ unsupported subfeatures can still produce explicit errors.
 
 `tests_api/` is the default suite and uses disposable native collections, with
 controlled Qt admission for ordering tests. Real GUI checks require a working
-display and temporary profiles; sync requires a disposable test account. Run `./test.sh` to execute unit tests and all GUI scenarios for both protocols against
-the Anki versions listed in its array, using isolated cached environments.
-On Windows, `.\test.ps1` runs the same matrix in PowerShell.
-Use `--no-ui` (PowerShell: `-NoUI`) to skip GUI scenarios when a display is unavailable.
+display and temporary profiles; sync requires a disposable test account. Run `make test` to execute unit tests and all GUI scenarios for both protocols against
+the Anki versions listed in `tools/test.sh`, using isolated cached environments.
+On Windows, `.\tools\test.ps1` runs the same matrix in PowerShell.
+Use `make test-unit` (PowerShell: `-NoUI`) to skip GUI scenarios when a display is unavailable.
 The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
 The [coverage inventory](API_TEST_COVERAGE.md) distinguishes direct service,
 controlled admission, and real GUI evidence for each public method. Both test
@@ -115,5 +115,5 @@ are explicitly listed and remain work to do.
 
 `tools/build_api_contract.py` bundles the source contract, including the
 `x-legacyTargets` registry used for legacy capability checks. Use `--check` to
-verify generated output without writing files. `package.sh` invokes
-`tools/package_addon.py`, which builds a ZIP without cleaning the checkout.
+verify generated output without writing files. `make package` runs `tools/package.sh`
+and the Python ZIP builder, `tools/package_addon.py`, without cleaning the checkout.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real-GUI smoke checks, run by test.sh/test.ps1 by default; uses disposable Anki profiles.
+"""Real-GUI smoke checks, run by tools/test.sh/tools/test.ps1 by default; uses disposable Anki profiles.
 
 Run with the pinned environment and a working display:
     python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|exit|legacy-exit]

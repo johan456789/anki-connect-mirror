@@ -7,7 +7,7 @@ ANKI_VERSIONS=(
 
 set -euo pipefail
 
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 CACHE_DIR="${ANKI_TEST_CACHE:-$ROOT_DIR/.test-cache}"
 BOOTSTRAP_PYTHON="${ANKI_TEST_BOOTSTRAP_PYTHON:-python3}"
@@ -18,7 +18,7 @@ for argument in "$@"; do
     case "$argument" in
         --no-ui) RUN_UI=0 ;;
         -h|--help)
-            printf 'Usage: ./test.sh [--no-ui] [ANKI_VERSION ...]\n'
+            printf 'Usage: ./tools/test.sh [--no-ui] [ANKI_VERSION ...]\n'
             printf 'Run unit and UI tests for each version; --no-ui skips UI scenarios.\n'
             exit 0
             ;;
@@ -83,7 +83,7 @@ PY
     if (( RUN_UI )); then
         printf '\nRunning all UI scenarios for Anki %s\n' "$version"
         if [[ "$(uname -s)" == Linux && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" && -z "${QT_QPA_PLATFORM:-}" ]]; then
-            printf 'UI tests require a display. Use xvfb-run ./test.sh or ./test.sh --no-ui.\n' >&2
+            printf 'UI tests require a display. Use xvfb-run make test or make test-unit.\n' >&2
             exit 1
         fi
         # Disposable profiles and trusted test content; allow WebEngine in CI containers.

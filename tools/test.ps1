@@ -13,7 +13,7 @@ $ANKI_VERSIONS = @(
 )
 
 if ($Help) {
-    Write-Host 'Usage: .\test.ps1 [-NoUI] [-Versions 26.8,26.9.3]'
+    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-Versions 26.8,26.9.3]'
     Write-Host 'Run unit and UI tests for each version; -NoUI skips UI scenarios.'
     exit 0
 }
@@ -56,10 +56,11 @@ foreach ($name in $environmentNames) {
     $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 $exitCode = 0
-Push-Location $PSScriptRoot
+$root = Split-Path -Parent $PSScriptRoot
+Push-Location $root
 try {
     $cache = if ($env:ANKI_TEST_CACHE) { $env:ANKI_TEST_CACHE } else {
-        Join-Path $PSScriptRoot '.test-cache'
+        Join-Path $root '.test-cache'
     }
     $null = New-Item -ItemType Directory -Force -Path $cache
     $cache = (Resolve-Path -LiteralPath $cache).Path

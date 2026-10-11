@@ -204,7 +204,7 @@ def render(indexed, schema, deferred):
         'coverage backlog, not a claim that all methods work. No entry is marked fully tested.',
         'The report describes test code; it does not record a passing run on any OS or Anki version.', '',
         'Both runners execute the maintained unit suite and, by default, all GUI scenarios.',
-        'See [test.sh](test.sh) and [test.ps1](test.ps1) for the current version matrix.',
+        'See [tools/test.sh](tools/test.sh) and [tools/test.ps1](tools/test.ps1) for the current version matrix.',
         'Windows must be validated separately.', '',
         '## Primary goal: Anki compatibility', '',
         'The main purpose of the version matrix is to detect changes in Anki internals that break',
