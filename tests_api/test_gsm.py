@@ -41,10 +41,13 @@ def test_gsm_full_path_media_names_keep_native_legacy_normalization(admitted, fi
     data = base64.b64encode(b'GSM captured audio').decode()
     reply = exchange(owner, drain, {'action': 'storeMediaFile', 'version': 6,
                                    'params': {'filename': filename, 'data': data}})
-    assert reply == {'result': expected, 'error': None}
-    assert (Path(service.col.media.dir()) / expected).read_bytes() == b'GSM captured audio'
-    assert exchange(owner, drain, {'action': 'storeMediaFile', 'version': 6,
-        'params': {'filename': filename, 'data': data, 'deleteExisting': False}}) == reply
+    # Native writes may retain requested case on Windows when reusing a file.
+    assert reply['error'] is None and os.path.normcase(reply['result']) == expected
+    assert (Path(service.col.media.dir()) / reply['result']).read_bytes() == b'GSM captured audio'
+    repeated = exchange(owner, drain, {'action': 'storeMediaFile', 'version': 6,
+        'params': {'filename': filename, 'data': data, 'deleteExisting': False}})
+    assert repeated['error'] is None and os.path.normcase(repeated['result']) == expected
+    assert (Path(service.col.media.dir()) / repeated['result']).read_bytes() == b'GSM captured audio'
 
 
 def test_gsm_desktop_enrichment_polling_and_native_review_sync(admitted):

@@ -7,6 +7,7 @@ keys, and exact model-exists/duplicate error strings. Custom scripts may change
 fields and add video. The Windows application itself is not launched here.
 """
 import json
+import os
 import socket
 from pathlib import Path
 
@@ -122,7 +123,8 @@ def test_luna_desktop_get_mining_model_refresh_media_and_overwrite(admitted, tmp
             for entry in entries:
                 field = entry['fields'][0]
                 name = entry['filename'].lower()
-                assert name in note[field]
+                # Native writes may retain requested case when reusing a file on Windows.
+                assert name in os.path.normcase(note[field])
                 assert (Path(service.col.media.dir()) / name).read_bytes() == field.encode()
     assert notifications and owner.window()._background_op_count == 0
 

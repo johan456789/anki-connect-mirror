@@ -226,7 +226,8 @@ def test_legacy_attachment_acquisition_errors_are_embedded_in_fields(admitted, t
     """addNote, addNotes and updateNoteFields retain legacy attachment failure results."""
     import html
     owner, service, drain, _, _ = admitted
-    path = str(tmp_path / 'missing<&>.txt')
+    # Ampersands exercise HTML escaping while remaining valid on Windows.
+    path = str(tmp_path / 'missing&.txt')
     try:
         with open(path, 'rb'):
             pass
