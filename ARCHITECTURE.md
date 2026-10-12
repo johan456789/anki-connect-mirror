@@ -25,6 +25,12 @@ metadata logging, and starts a retained Qt timer. Importing as `plugin` in tests
 skips automatic startup. The timer advances socket reads/writes without blocking
 on API completion. Each connection closes after its reply drains.
 
+After the listener starts, Anki-Connect uses Anki's macOS helper to suppress App
+Nap for the process lifetime, including profile switches. The native helper
+retains the activity token and allows idle system sleep. Other platforms skip
+suppression. A helper failure is reported to the console without stopping the
+listener.
+
 Admission captures the active collection and opaque session on Qt's main thread.
 GUI operations stay there. Collection tasks use Anki's task manager with its
 serialized collection access and background-operation lifecycle counter. File

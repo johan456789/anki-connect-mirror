@@ -31,6 +31,7 @@ if anki_version < required_anki_version:
 
 import inspect
 import json
+from aqt._macos_helper import macos_helper
 from aqt.qt import Qt, QTimer, QMessageBox, QCheckBox
 from . import util, web
 from .edit import Edit
@@ -69,6 +70,14 @@ class AnkiConnect:
             self.timer.start(util.setting('apiPollInterval'))
         except Exception as error:
             QMessageBox.critical(self.window(), 'AnkiConnect', str(error))
+            return
+
+        if macos_helper is not None:
+            try:
+                # Anki's helper retains the activity token until process exit.
+                macos_helper.disable_appnap()
+            except Exception as error:
+                print('AnkiConnect: failed to disable App Nap: {}'.format(error))
 
     def advance(self):
         self.server.advance()

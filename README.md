@@ -27,6 +27,11 @@ Install [Anki-Connect from AnkiWeb](https://ankiweb.net/shared/info/2055492159):
 Keep Anki running while your application uses the API; requests operate on the
 active profile's collection.
 
+On macOS, Anki-Connect automatically suppresses App Nap after its HTTP listener
+starts, keeping API requests responsive while Anki is minimized or in the
+background. Suppression lasts until Anki exits and still allows normal system
+sleep. No `defaults write` commands or separate App Nap add-on are needed.
+
 ## Make your first request
 
 The default v1 endpoint is `http://127.0.0.1:8765/api/v1`:
