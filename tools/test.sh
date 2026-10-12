@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Edit this array to define the default Anki compatibility matrix.
+# Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
 ANKI_VERSIONS=(
     "26.8"
     "26.9.3"
@@ -13,13 +13,16 @@ CACHE_DIR="${ANKI_TEST_CACHE:-$ROOT_DIR/.test-cache}"
 BOOTSTRAP_PYTHON="${ANKI_TEST_BOOTSTRAP_PYTHON:-python3}"
 TEST_PYTHON="${ANKI_TEST_PYTHON:-3.13}"
 RUN_UI=1
+RUN_ALL_VERSIONS=0
 requested_versions=()
 for argument in "$@"; do
     case "$argument" in
         --no-ui) RUN_UI=0 ;;
+        --all-versions) RUN_ALL_VERSIONS=1 ;;
         -h|--help)
-            printf 'Usage: ./tools/test.sh [--no-ui] [ANKI_VERSION ...]\n'
-            printf 'Run unit and UI tests for each version; --no-ui skips UI scenarios.\n'
+            printf 'Usage: ./tools/test.sh [--no-ui] [--all-versions | ANKI_VERSION ...]\n'
+            printf 'Test the latest matrix version by default; --all-versions tests the full matrix.\n'
+            printf 'Run unit and UI tests; --no-ui skips UI scenarios.\n'
             exit 0
             ;;
         -*)
@@ -30,7 +33,13 @@ for argument in "$@"; do
     esac
 done
 if (( ${#requested_versions[@]} > 0 )); then
+    if (( RUN_ALL_VERSIONS )); then
+        printf 'Cannot combine --all-versions with explicit Anki versions.\n' >&2
+        exit 2
+    fi
     ANKI_VERSIONS=("${requested_versions[@]}")
+elif (( ! RUN_ALL_VERSIONS )); then
+    ANKI_VERSIONS=("${ANKI_VERSIONS[${#ANKI_VERSIONS[@]}-1]}")
 fi
 for version in "${ANKI_VERSIONS[@]}"; do
     if [[ ! "$version" =~ ^[0-9][0-9A-Za-z.+-]*$ ]]; then

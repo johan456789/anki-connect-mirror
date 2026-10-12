@@ -69,8 +69,9 @@ completion/lifecycle checks across versions. Protocol checks are supplementary;
 do not require HTTP coverage per method. Exceedingly difficult GUI effects may be
 deferred in the coverage inventory with a reason and a practical alternative.
 
-Run `make test` for the cached version matrix, including UI scenarios by default.
-On Windows, run `.\tools\test.ps1`; `-NoUI` skips UI scenarios.
+Run `make test` for the latest cached Anki version, including UI scenarios by default.
+Use `make test TEST_ARGS=--all-versions` for the full version matrix.
+On Windows, run `.\tools\test.ps1`; `-AllVersions` selects the full matrix and `-NoUI` skips UI scenarios.
 Use `make test-unit` for unit-only validation. The default suite is configured in `pyproject.toml`. Use Python 3.10+ with
 `anki==26.9.3`, `aqt==26.9.3`, `jsonschema>=4.18`, and `pytest>=8` in a separate
 environment. Do not install pytest-anki for this suite.

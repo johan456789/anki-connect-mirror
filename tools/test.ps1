@@ -2,19 +2,21 @@
 [CmdletBinding()]
 param(
     [switch]$NoUI,
+    [switch]$AllVersions,
     [string[]]$Versions,
     [switch]$Help
 )
 
-# Edit this array to define the default Anki compatibility matrix.
+# Keep the compatibility matrix ordered oldest to latest; the last entry is the default.
 $ANKI_VERSIONS = @(
     '26.8'
     '26.9.3'
 )
 
 if ($Help) {
-    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-Versions 26.8,26.9.3]'
-    Write-Host 'Run unit and UI tests for each version; -NoUI skips UI scenarios.'
+    Write-Host 'Usage: .\tools\test.ps1 [-NoUI] [-AllVersions | -Versions 26.8,26.9.3]'
+    Write-Host 'Test the latest matrix version by default; -AllVersions tests the full matrix.'
+    Write-Host 'Run unit and UI tests; -NoUI skips UI scenarios.'
     exit 0
 }
 
@@ -23,7 +25,12 @@ $ErrorActionPreference = 'Stop'
 # Check native exit codes explicitly, including under PowerShell 7.3+.
 $PSNativeCommandUseErrorActionPreference = $false
 if ($PSBoundParameters.ContainsKey('Versions')) {
+    if ($AllVersions) {
+        throw 'Cannot combine -AllVersions with -Versions.'
+    }
     $ANKI_VERSIONS = $Versions
+} elseif (-not $AllVersions) {
+    $ANKI_VERSIONS = @($ANKI_VERSIONS[-1])
 }
 if (-not $ANKI_VERSIONS.Count) {
     throw 'Specify at least one Anki version.'

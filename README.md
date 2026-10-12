@@ -115,9 +115,11 @@ add-on code while retaining its saved configuration.
 
 For development on Linux or macOS, `make link` links `plugin/` into an existing
 Anki add-ons directory. Use temporary profiles and collections when testing.
-Run `make test` or `.\tools\test.ps1` on Windows for the Anki compatibility matrix,
+Run `make test` or `.\tools\test.ps1` on Windows for the latest Anki version in the matrix,
 including GUI scenarios. To skip GUI scenarios, use `make test-unit` or
 `.\tools\test.ps1 -NoUI`.
+To test the full compatibility matrix, use `make test TEST_ARGS=--all-versions`,
+`./tools/test.sh --all-versions`, or `.\tools\test.ps1 -AllVersions`.
 
 Run `make help` for all development commands. Use `make test VERSIONS="26.9.3"`
 to select Anki versions. The runners cache dependencies and interpreters in

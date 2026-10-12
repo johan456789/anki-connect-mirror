@@ -110,8 +110,9 @@ unsupported subfeatures can still produce explicit errors.
 `tests_api/` is the default suite and uses disposable native collections, with
 controlled Qt admission for ordering tests. Real GUI checks require a working
 display and temporary profiles; sync requires a disposable test account. Run `make test` to execute unit tests and all GUI scenarios for both protocols against
-the Anki versions listed in `tools/test.sh`, using isolated cached environments.
-On Windows, `.\tools\test.ps1` runs the same matrix in PowerShell.
+the latest Anki version listed in `tools/test.sh`, using isolated cached environments.
+On Windows, `.\tools\test.ps1` uses the same default in PowerShell.
+Use `make test TEST_ARGS=--all-versions` or `.\tools\test.ps1 -AllVersions` to run the full matrix.
 Use `make test-unit` (PowerShell: `-NoUI`) to skip GUI scenarios when a display is unavailable.
 The public references are [API v1](API_V1.md) and [legacy API](API_LEGACY.md).
 The [coverage inventory](API_TEST_COVERAGE.md) distinguishes direct service,
