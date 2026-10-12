@@ -102,7 +102,7 @@ def test_legacy_note_errors_keep_client_compatible_wording(native, failure, mess
         assert str(caught.value) == 'Note cannot be created.'
 
 
-def test_legacy_batch_duplicate_and_empty_question_errors(native):
+def test_legacy_batch_duplicate_and_native_empty_question_fallback(native):
     owner, service = native
     with pytest.raises(ApiError) as caught:
         old(native, 'addNotes', notes=[legacy_note('batch'), legacy_note('batch')])
@@ -113,12 +113,15 @@ def test_legacy_batch_duplicate_and_empty_question_errors(native):
     service.col.models.save(model)
     source = legacy_note('nonempty first field')
     source['fields']['Back'] = ''
-    message = 'The field values you have provided would make an empty question on all cards.'
-    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': False, 'error': message}
-    with pytest.raises(ApiError) as caught:
-        old(native, 'addNote', note=source)
-    assert str(caught.value) == message
-    assert service.col.note_count() == 0
+    assert old(native, 'canAddNoteWithErrorDetail', note=source) == {'canAdd': True}
+    id = old(native, 'addNote', note=source)
+    assert type(id) is int and service.col.note_count() == 1
+    assert service.col.get_note(id).card_ids()
+    assert service.empty_questions(service.col.get_note(id))
+    # v1 retains its explicit question-render validation policy.
+    probe = {**note_input('different first field'), 'fields': {'Front': 'different', 'Back': ''}}
+    assert call(service, 'notes.validate', note=probe)['issues'] == [
+        {'type': 'emptyQuestions', 'message': 'All generated questions are empty.'}]
 
 
 @pytest.mark.parametrize('options,label', [

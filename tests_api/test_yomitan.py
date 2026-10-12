@@ -27,6 +27,32 @@ def exchange(owner, drain, request):
     return json.loads(body)
 
 
+@pytest.mark.parametrize('action', ['addNote', 'addNotes'])
+def test_yomitan_conditional_questions_preserve_native_fallback_cards(admitted, action):
+    """addNote/addNotes/canAddNoteWithErrorDetail/notesInfo use the old native fallback.
+
+    Compared with pre-rewrite de6e6e1: a nonempty expression with an unfilled
+    conditional question creates one fallback card instead of a render error.
+    """
+    owner, service, drain, _, _ = admitted
+    model = service.col.models.by_name('Basic')
+    model['tmpls'][0]['qfmt'] = '{{#Back}}{{Back}}{{/Back}}'
+    service.col.models.save(model)
+    source = {'modelName': 'Basic', 'deckName': 'Default',
+              'fields': {'Front': '日本語', 'Back': ''}, 'options': {'allowDuplicate': True}}
+    assert exchange(owner, drain, {'action': 'canAddNoteWithErrorDetail', 'version': 2,
+        'params': {'note': source}}) == {'canAdd': True}
+    value = exchange(owner, drain, {'action': action, 'version': 2,
+        'params': {'notes': [source]} if action == 'addNotes' else {'note': source}})
+    id = value[0] if action == 'addNotes' else value
+    assert type(id) is int
+    info = exchange(owner, drain, {'action': 'notesInfo', 'version': 2, 'params': {'notes': [id]}})[0]
+    assert info['noteId'] == id and len(info['cards']) == 1
+    assert info['fields']['Front']['value'] == '日本語'
+    assert service.empty_questions(service.col.get_note(id))
+    assert service.col.note_count() == 1
+
+
 @pytest.mark.parametrize('api_key', [None, 'test-key'])
 def test_yomitan_mining_lookup_overwrite_media_and_suspension(admitted, monkeypatch, api_key):
     from plugin import util

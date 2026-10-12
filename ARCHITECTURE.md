@@ -110,7 +110,9 @@ is a capability probe, not proof of integration testing; method-specific state a
 unsupported subfeatures can still produce explicit errors.
 
 `tests_api/` is the default suite and uses disposable native collections, with
-controlled Qt admission for ordering tests. Real GUI checks require a working
+controlled Qt admission for ordering tests. Client request flows cover Yomitan,
+Obsidian_to_Anki, LunaTranslator, asbplayer and GameSentenceMiner (GSM).
+Real GUI checks require a working
 display and temporary profiles; sync requires a disposable test account. Run `make test` to execute unit tests and all GUI scenarios for both protocols against
 the latest Anki version listed in `tools/test.sh`, using isolated cached environments.
 On Windows, `.\tools\test.ps1` uses the same default in PowerShell.

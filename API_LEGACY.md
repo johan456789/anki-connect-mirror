@@ -166,7 +166,7 @@ an array. Each object needs `filename` and a nonempty `data`, `path`, or `url`. 
 Its `fields` array names fields to append the reference to. `skipHash` is an
 optional MD5 digest of incoming bytes to skip. Acquisitions happen before owned
 media writes; media rollback is separate from the collection transaction.
-Attachment acquisition errors are HTML-escaped and appended to the selected fields, preserving historical note behavior. Standalone `storeMediaFile` returns an error for the same failure. Size limits, unsafe filenames, and media transaction failures still raise errors.
+Attachment acquisition errors are HTML-escaped and appended to the selected fields, preserving historical note behavior. Standalone `storeMediaFile` returns an error for the same failure. Size limits, invalid storage names, and media transaction failures still raise errors.
 Eligibility checks do not download or write files.
 
 Legacy note validation and creation preserve the historical error strings:
@@ -175,6 +175,17 @@ Legacy note validation and creation preserve the historical error strings:
 as Yomitan use the duplicate wording to recognize existing notes. Missing models
 and decks report `model was not found: NAME` and `deck was not found: NAME`.
 The v1 API retains its structured validation issues.
+
+Legacy validation checks the first field and duplicates, then lets Anki create
+its native fallback card even when every question template renders empty.
+This preserves historical behavior for clients with conditional templates.
+The v1 API keeps `rejectEmptyQuestions=true` by default.
+
+Desktop clients such as LunaTranslator can send legacy GET requests with JSON
+bodies. These use the same version-6 response envelopes as POST requests.
+LunaTranslator and GSM's desktop helpers do not supply API keys; their clients
+must add key support to work when `apiKey` is configured. Browser clients such
+as asbplayer and GSM's overlay also require an allowed origin or permission grant.
 
 ## Card Actions
 
@@ -1564,7 +1575,7 @@ Return whether the GUI reviewer is active.
 
 ### `storeMediaFile`
 
-Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
+Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. Legacy filenames use the host platform's basename and have Anki's illegal characters removed before storage inside the media directory; v1 requires a basename. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
 
 **Parameters:** `storeMediaFile(filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True)`
 

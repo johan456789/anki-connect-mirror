@@ -2,7 +2,7 @@
 """Real-GUI smoke checks, run by tools/test.sh/tools/test.ps1 by default; uses disposable Anki profiles.
 
 Run with the pinned environment and a working display:
-    python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|obsidian|exit|legacy-exit]
+    python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|obsidian|mining-clients|exit|legacy-exit]
 
 No sync credentials are used. Profiles/files remain in the OS temp directory for diagnostics.
 Processes exit after checks to isolate native Qt/WebEngine teardown; application
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Each scenario runs in a fresh process/profile to isolate Qt WebEngine teardown.
 scenario = sys.argv[1] if len(sys.argv) > 1 else 'all'
-scenarios = ['editors', 'browser', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'obsidian', 'exit', 'legacy-exit']
+scenarios = ['editors', 'browser', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'obsidian', 'mining-clients', 'exit', 'legacy-exit']
 if scenario == 'all':
     import subprocess
     failures = []
@@ -573,6 +573,60 @@ try:
         owner.timer.stop()
         util.setting = setting
         print('PASS Obsidian nested HTTP sync, native Qt completion, media, edits, deck moves, tags and deletion', flush=True)
+    if scenario == 'mining-clients':
+        """createDeck/createModel/addNote/updateModelStyling/updateModelTemplates/
+        deleteNotes/storeMediaFile through LunaTranslator GET and GSM POST.
+        """
+        import base64
+        import json
+        import threading
+        import urllib.request
+        from plugin import util
+        from tests_api.test_lunatranslator import exercise_luna
+        setting = util.setting
+        util.setting = lambda name: 0 if name == 'webBindPort' else setting(name)
+        owner.startWebServer()
+        port = owner.server.sock.getsockname()[1]
+        def exchange(action, params, method='GET'):
+            replies = []
+            def send():
+                try:
+                    payload = {'action': action, 'version': 6, 'params': params}
+                    request = urllib.request.Request('http://127.0.0.1:' + str(port),
+                        json.dumps(payload).encode(), {'Content-Type': 'application/json'}, method=method)
+                    with urllib.request.urlopen(request, timeout=30) as response:
+                        replies.append(json.load(response))
+                except BaseException as error:
+                    replies.append(error)
+            thread = threading.Thread(target=send, daemon=True)
+            thread.start()
+            wait_until(lambda: bool(replies), timeout=35, description='Desktop mining HTTP request')
+            thread.join(timeout=1)
+            assert not isinstance(replies[0], BaseException), replies
+            return replies[0]
+        first, deleted, replacement, source = exercise_luna(
+            lambda action, **params: exchange(action, params), base)
+        assert aqt.mw.col.find_notes('nid:' + str(deleted)) == []
+        for id in [first, replacement]:
+            assert aqt.mw.col.get_note(id)['word'] == '猫'
+        response = exchange('storeMediaFile', {'filename': r'C:\GSM\猫.PNG',
+            'data': base64.b64encode(b'GSM screenshot').decode()}, method='POST')
+        expected_name = '猫.png' if os.name == 'nt' else 'cgsm猫.png'
+        assert response == {'result': expected_name, 'error': None}, response
+        assert (Path(aqt.mw.col.media.dir()) / response['result']).read_bytes() == b'GSM screenshot'
+        assert exchange('updateModelTemplates', {'model': {'name': source['modelName'], 'templates': {
+            'LUNACARDTEMPLATE1': {'Front': '{{#example_sentence}}{{example_sentence}}{{/example_sentence}}'}}}}) == {
+                'result': None, 'error': None}
+        fallback = exchange('addNote', {'note': {'modelName': source['modelName'],
+            'deckName': source['deckName'], 'fields': {'word': 'Conditional fallback'}}}, method='POST')
+        assert fallback['error'] is None and type(fallback['result']) is int, fallback
+        actual = aqt.mw.col.get_note(fallback['result'])
+        assert actual['word'] == 'Conditional fallback' and len(actual.card_ids()) == 1
+        assert aqt.mw._background_op_count == 0
+        owner.server.close()
+        owner.timer.stop()
+        util.setting = setting
+        print('PASS LunaTranslator GET model refresh, media and overwrite; GSM full-path media; native fallback card', flush=True)
     if scenario in ('exit', 'legacy-exit'):
         import json
         import threading

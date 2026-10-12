@@ -1171,16 +1171,16 @@
     },
     {
       "source": "tests_api/test_compatibility.py",
-      "case": "test_legacy_batch_duplicate_and_empty_question_errors",
+      "case": "test_legacy_batch_duplicate_and_native_empty_question_fallback",
       "layer": "legacy-forwarder",
       "outcome": "failure",
-      "v1": [],
-      "legacy": [
-        "addNote",
-        "addNotes",
-        "canAddNoteWithErrorDetail"
+      "v1": [
+        "notes.validate"
       ],
-      "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+      "legacy": [
+        "addNotes"
+      ],
+      "notes": "Real native collection: legacy bulk duplicates retain their aggregated error, while v1 notes.validate retains strict empty-question validation. No HTTP or real GUI."
     },
     {
       "source": "tests_api/test_compatibility.py",
@@ -1438,6 +1438,175 @@
         "setEaseFactors"
       ],
       "notes": "Disposable native collection with controlled admission; checks historical attachment error embedding, media source precedence/collision behavior, or ordered partial scheduling effects. No external network or GUI execution."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_batch_duplicate_and_native_empty_question_fallback",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "canAddNoteWithErrorDetail"
+      ],
+      "notes": "Legacy nonempty-first-field notes with blank question templates retain native fallback cards. Native card persistence and rendered emptiness asserted; HTTP and admission bypassed."
+    },
+    {
+      "source": "tests_api/test_yomitan.py",
+      "case": "test_yomitan_conditional_questions_preserve_native_fallback_cards",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail",
+        "notesInfo"
+      ],
+      "notes": "Version-2 HTTP requests create native fallback cards for nonempty expressions with blank conditional question templates, matching de6e6e1; persisted fields, numeric IDs and card count asserted. Yomitan UI not launched."
+    },
+    {
+      "source": "tests_api/test_lunatranslator.py",
+      "case": "test_luna_desktop_get_mining_model_refresh_media_and_overwrite",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createDeck",
+        "createModel",
+        "addNote",
+        "updateModelStyling",
+        "updateModelTemplates",
+        "deleteNotes"
+      ],
+      "notes": "LunaTranslator GET requests with JSON bodies pass through real sockets, HTTP parsing and controlled admission. Native custom field order, HTML, model/template refresh, numeric IDs, duplicate messages, path media, uppercase filenames, tags and delete/recreate overwrite asserted. Client UI not launched."
+    },
+    {
+      "source": "tests_api/test_lunatranslator.py",
+      "case": "test_luna_client_without_key_retains_authentication_error",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "createDeck"
+      ],
+      "notes": "LunaTranslator desktop requests do not send a key. Configured API key correctly rejects the GET request before collection execution; no deck mutation."
+    },
+    {
+      "source": "tests_api/test_asbplayer.py",
+      "case": "test_asbplayer_browser_fetch_mining_media_update_and_status",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "version",
+        "deckNames",
+        "modelNames",
+        "modelFieldNames",
+        "createDeck",
+        "addNote",
+        "findNotes",
+        "notesInfo",
+        "findCards",
+        "cardsInfo",
+        "notesModTime",
+        "cardsModTime",
+        "areSuspended",
+        "storeMediaFile",
+        "updateNoteFields",
+        "addTags"
+      ],
+      "notes": "Six combinations of asbplayer website/legacy website/extension origins and optional API keys. Private-network preflight, text/plain JSON POSTs, native mining/status, normalized media filenames and update-null acknowledgement asserted, with unchanged scheduling. Browser fetch engine and asbplayer UI not launched."
+    },
+    {
+      "source": "tests_api/test_asbplayer.py",
+      "case": "test_asbplayer_unconfigured_origin_can_preflight_but_cannot_mutate",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "createDeck"
+      ],
+      "notes": "An unconfigured asbplayer web origin can preflight but remains denied on POST; preflight does not authorize writes. Native collection is inspected, createDeck body is not executed."
+    },
+    {
+      "source": "tests_api/test_gsm.py",
+      "case": "test_gsm_full_path_media_names_keep_native_legacy_normalization",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "storeMediaFile"
+      ],
+      "notes": "Windows and POSIX full-path filename arguments retain native illegal-character stripping and lowercase names. Exact response, bytes, and same-data reuse asserted through HTTP wrapper; desktop GSM itself is not run."
+    },
+    {
+      "source": "tests_api/test_gsm.py",
+      "case": "test_gsm_desktop_enrichment_polling_and_native_review_sync",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "findNotes",
+        "notesInfo",
+        "findCards",
+        "cardsInfo",
+        "storeMediaFile",
+        "updateNoteFields",
+        "addTags",
+        "removeTags",
+        "getReviewsOfCards"
+      ],
+      "notes": "Replay GSM desktop enrichment of a Yomitan-created note and cache lookups. Native review answers precede update; scheduling preserved, legacy review dictionary keys/types and missing-record sentinels asserted. No GSM OCR, recording or database processes."
+    },
+    {
+      "source": "tests_api/test_gsm.py",
+      "case": "test_gsm_overlay_discovery_and_index_keep_nested_envelopes",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "multi",
+        "deckNames",
+        "modelNames",
+        "modelFieldNames",
+        "modelNamesAndIds",
+        "findNotes",
+        "canAddNotesWithErrorDetail"
+      ],
+      "notes": "GSM overlay version-6 discovery/index multi calls with and without API keys. Numeric model IDs, per-child envelopes, mature queries and addability results asserted. Overlay UI not launched."
+    },
+    {
+      "source": "tests_api/test_gsm.py",
+      "case": "test_gsm_five_hundred_note_and_card_cache_batches_are_not_truncated",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNotes",
+        "findNotes",
+        "notesInfo",
+        "cardsInfo"
+      ],
+      "notes": "Native 500-note/card cache requests preserve order and all nested field values without truncation; matches GSM cron batch sizes. No GSM database process."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "mining-clients",
+      "layer": "http-gui",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createDeck",
+        "createModel",
+        "addNote",
+        "updateModelStyling",
+        "updateModelTemplates",
+        "deleteNotes",
+        "storeMediaFile"
+      ],
+      "notes": "Disposable real Anki GUI: actual HTTP GET LunaTranslator first-add/model-refresh/duplicate/media/overwrite flow, GSM POST full-path media, and blank conditional question fallback. Native Qt/task completion and persistence checked. LunaTranslator/GSM clients themselves are not launched."
     }
   ],
   "unreferenced": {

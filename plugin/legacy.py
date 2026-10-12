@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 from .protocol import ApiError, Deferred
-from .services import RATINGS, KINDS, PRESET_ENUMS
+from .services import RATINGS, KINDS, PRESET_ENUMS, MEDIA_ILLEGAL_CHARACTERS
 
 
 class Accepted:
@@ -137,7 +137,10 @@ class Legacy:
             deck_name = scoped.get('deckName')
             duplicates['deck'] = self.ref(source['deckName'] if deck_name is None else deck_name)
         data = {'noteType': self.ref(source['modelName']), 'deck': self.ref(source['deckName']),
-                'fields': fields, 'tags': list(source.get('tags', [])), 'duplicates': duplicates}
+                'fields': fields, 'tags': list(source.get('tags', [])), 'duplicates': duplicates,
+                # Legacy creation lets Anki generate its fallback card. Rendering
+                # a blank template is not the same as a native add returning 0.
+                'rejectEmptyQuestions': False}
         if pure:
             self.attachments(data['fields'], source, pure=True)
         return data
@@ -173,8 +176,14 @@ class Legacy:
         if self.media_transaction is None:
             self.media_transaction = MediaTransaction(self.service)
         skip = {'algorithm': 'md5', 'digest': entry['skipHash']} if entry.get('skipHash') else None
-        return self.media_transaction.install(entry['filename'], data, skip,
+        return self.media_transaction.install(self.media_name(entry['filename']), data, skip,
                     'replace' if entry.get('deleteExisting', True) else 'rename')
+
+    def media_name(self, filename):
+        # Anki's old writeData wrapper took the host-platform basename, then
+        # the native writer stripped illegal characters. GSM passes full paths.
+        # Sanitize before journaling; every destination is still a basename.
+        return self.service.media_filename(MEDIA_ILLEGAL_CHARACTERS.sub('', os.path.basename(filename)))
 
     def attachments(self, fields, source, pure=False):
         staged = []
@@ -243,7 +252,7 @@ class Legacy:
                 for entry in entries:
                     if not entry:
                         continue
-                    filename = self.service.media_filename(entry['filename'])
+                    filename = self.media_name(entry['filename'])
                     try:
                         data = self.acquire(entry)
                     except Exception as error:
@@ -377,6 +386,7 @@ class Legacy:
                 runtime.capture(session)
                 if note:
                     note.pop('duplicates', None)
+                    note.pop('rejectEmptyQuestions', None)
                 return accepted('editors.openAdd', 0, lambda value: int(value['noteId'] or 0), **({'note': note} if note else {}))
             if note and any(p['note'].get(kind) for kind in ('audio', 'video', 'picture')):
                 return self.prepare_gui_media(note['fields'], p['note']).map(open_add)
