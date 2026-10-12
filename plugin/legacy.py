@@ -129,9 +129,7 @@ class Legacy:
                                    ('checkAllModels', scoped, 'duplicateScopeOptions.checkAllModels')):
             if key in values and type(values[key]) is not bool:
                 raise ApiError('invalidParams', 'option parameter "' + label + '" must be boolean')
-        scope = options.get('duplicateScope') or 'collection'
-        if scope not in ('collection', 'deck'):
-            raise ApiError('invalidParams', 'Unknown duplicate scope.')
+        scope = 'deck' if options.get('duplicateScope') == 'deck' else 'collection'
         duplicates = {'allow': options.get('allowDuplicate', False), 'scope': scope,
                       'includeChildren': scoped.get('checkChildren', False),
                       'acrossNoteTypes': scoped.get('checkAllModels', False)}
@@ -148,20 +146,22 @@ class Legacy:
         import base64
         import urllib.request
         from . import util
-        sources = [key for key in ('data', 'path', 'url') if params.get(key) is not None]
+        sources = [key for key in ('data', 'path', 'url') if params.get(key)]
         if not sources:
             raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
-        if len(sources) != 1:
-            raise ApiError('invalidParams', 'Provide exactly one of data, path, or url.')
         key = sources[0]
         if key == 'data':
-            data = base64.b64decode(params[key], validate=True)
+            data = base64.b64decode(params[key])
         elif key == 'path':
             with open(params[key], 'rb') as file:
                 data = file.read(67108865)
         else:
-            with urllib.request.urlopen(params[key], timeout=util.setting('webTimeout') / 1000) as response:
-                data = response.read(67108865)
+            import urllib.error
+            try:
+                with urllib.request.urlopen(params[key], timeout=util.setting('webTimeout') / 1000) as response:
+                    data = response.read(67108865)
+            except urllib.error.HTTPError as error:
+                raise ApiError('ioError', '{} download failed with return code {}'.format(params[key], error.code)) from error
         if len(data) > 67108864:
             raise ApiError('invalidParams', 'Media exceeds the size limit.')
         return data
@@ -183,7 +183,14 @@ class Legacy:
             entries = entries if isinstance(entries, list) else [entries]
             for entry in entries:
                 if entry:
-                    staged.append((kind, entry, None if pure else self.acquire(entry)))
+                    try:
+                        acquired = None if pure else self.acquire(entry)
+                    except Exception as error:
+                        if isinstance(error, ApiError) and str(error) == 'Media exceeds the size limit.':
+                            raise
+                        self.append_media_error(fields, entry, error)
+                        continue
+                    staged.append((kind, entry, acquired))
         for kind, entry, data in staged:
             filename = entry['filename'] if pure else self.install(entry, data)
             if filename is None:
@@ -193,6 +200,14 @@ class Legacy:
             for field in entry.get('fields', []):
                 if field in fields:
                     fields[field] += content
+
+    @staticmethod
+    def append_media_error(fields, entry, error):
+        # Historical note attachments report acquisition errors inside fields.
+        message = html.escape(str(error), quote=False)
+        for field in entry.get('fields', []):
+            if field in fields:
+                fields[field] += message
 
     def store_media(self, params):
         return self.install(params, self.acquire(params))
@@ -220,10 +235,7 @@ class Legacy:
             raise ApiError('validationFailed', self.validation_error({'items': validation}), {'items': validation})
         # Acquire every attachment before installing any file. Back up only
         # destinations this request owns; never scan or restore unrelated media.
-        staged = []
-        import base64
-        import urllib.request
-        from . import util
+        staged, acquisition_errors = [], {}
         for source in sources:
             for kind in ('audio', 'video', 'picture'):
                 entries = source.get(kind) or []
@@ -232,18 +244,13 @@ class Legacy:
                     if not entry:
                         continue
                     filename = self.service.media_filename(entry['filename'])
-                    if 'data' in entry:
-                        data = base64.b64decode(entry['data'], validate=True)
-                    elif 'path' in entry:
-                        with open(entry['path'], 'rb') as file:
-                            data = file.read(67108865)
-                    elif 'url' in entry:
-                        with urllib.request.urlopen(entry['url'], timeout=util.setting('webTimeout') / 1000) as response:
-                            data = response.read(67108865)
-                    else:
-                        raise ApiError('invalidParams', 'You must provide a "data", "path", or "url" field.')
-                    if len(data) > 67108864:
-                        raise ApiError('invalidParams', 'Media is too large.')
+                    try:
+                        data = self.acquire(entry)
+                    except Exception as error:
+                        if isinstance(error, ApiError) and str(error) == 'Media exceeds the size limit.':
+                            raise
+                        acquisition_errors[id(entry)] = error
+                        continue
                     staged.append((entry, filename, data))
         from .media import MediaTransaction
         transaction = MediaTransaction(self.service)
@@ -251,14 +258,20 @@ class Legacy:
         try:
             for entry, filename, data in staged:
                 skip = {'algorithm': 'md5', 'digest': entry['skipHash']} if entry.get('skipHash') else None
-                filenames[id(entry)] = transaction.install(filename, data, skip)
+                filenames[id(entry)] = transaction.install(filename, data, skip,
+                    'replace' if entry.get('deleteExisting', True) else 'rename')
             for source, data in zip(sources, prepared):
                 data['fields'] = self.created_note(source)['fields']
                 for kind in ('audio', 'video', 'picture'):
                     entries = source.get(kind) or []
                     entries = entries if isinstance(entries, list) else [entries]
                     for entry in entries:
-                        if not entry or filenames[id(entry)] is None:
+                        if not entry:
+                            continue
+                        if id(entry) in acquisition_errors:
+                            self.append_media_error(data['fields'], entry, acquisition_errors[id(entry)])
+                            continue
+                        if filenames[id(entry)] is None:
                             continue
                         filename = html.escape(filenames[id(entry)], quote=True)
                         content = '<img src="' + filename + '">' if kind == 'picture' else '[sound:' + filename + ']'
@@ -321,8 +334,28 @@ class Legacy:
             return None
         if name == 'guiBrowse':
             sort = p['reorderCards']
-            sort = {'column': sort['columnId'], 'direction': sort['order']} if sort else None
+            if sort is not None:
+                if not isinstance(sort, dict):
+                    raise ApiError('invalidParams', 'reorderCards should be a dict: ' + str(sort))
+                if 'columnId' not in sort or 'order' not in sort:
+                    raise ApiError('invalidParams', 'Must provide a "columnId" and a "order" property"')
+                if sort['order'] not in ('ascending', 'descending'):
+                    raise ApiError('invalidParams', 'invalid card order: ' + str(sort['order']))
+                if self.service is None:
+                    self.service = runtime.service()
+                if self.service.col.get_browser_column(sort['columnId']) is None:
+                    raise ApiError('invalidParams', 'invalid columnId: ' + str(sort['columnId']))
+                sort = {'column': sort['columnId'], 'direction': sort['order']}
             value = call('browser.open', query=p['query'], sort=sort)
+            if isinstance(value, Deferred):
+                pending = Deferred()
+                def translate(source):
+                    error = source.error
+                    if isinstance(error, ApiError) and str(error) == 'Browser sort column is not active.':
+                        error = ApiError('invalidParams', 'invalid columnId: ' + str(p['reorderCards']['columnId']))
+                    pending.resolve(source.value, error)
+                value.then(translate)
+                value = pending
             def project(_):
                 return [] if p['query'] is None else [int(id) for id in self.all_pages('cards.search', query=p['query'])]
             return value.map(project) if isinstance(value, Deferred) else project(value)
@@ -336,6 +369,8 @@ class Legacy:
         if name == 'guiEditNote':
             return accepted('editors.openNote', None, lambda value: None, noteId=str(p['note']))
         if name == 'guiAddCards':
+            if p['note']:
+                self.s('decks.get', deck=self.ref(p['note']['deckName']))
             note = self.created_note(p['note']) if p['note'] else None
             session = runtime.session
             def open_add(_=None):
@@ -351,6 +386,21 @@ class Legacy:
             if dialog is None:
                 return {'error': 'Add Note dialog is not open', 'code': 1}
             source = copy.deepcopy(p['note'])
+            if self.service is None:
+                self.service = runtime.service()
+            for key, kind, label in [('deckName', 'deck', 'Deck'), ('modelName', 'noteType', 'Model')]:
+                if key in source:
+                    try:
+                        self.resolve(self.ref(source[key]), kind)
+                    except ApiError as error:
+                        if error.kind == 'notFound':
+                            raise ApiError(error.kind, '{} "{}" not found'.format(label, source[key])) from error
+                        raise
+            if 'fields' in source and ('modelName' in source or hasattr(dialog.editor, 'note')):
+                model = self.model(source['modelName']) if 'modelName' in source else dialog.editor.note.note_type()
+                for field in source['fields']:
+                    if field not in [value['name'] for value in model['flds']]:
+                        raise ApiError('notFound', 'Field "' + field + '" not found in current note')
             patch = {key: value for key, value in source.items() if key in ('fields', 'tags')}
             for old, new in [('deckName', 'deck'), ('modelName', 'noteType')]:
                 if old in source:
@@ -364,7 +414,19 @@ class Legacy:
             value = (self.prepare_gui_media(patch['fields'], source).map(update)
                      if 'fields' in patch and any(source.get(kind) for kind in ('audio', 'video', 'picture'))
                      else update())
-            return value.map(lambda value: True) if isinstance(value, Deferred) else True
+            if isinstance(value, Deferred):
+                pending = Deferred()
+                def finished(source):
+                    error = source.error
+                    if isinstance(error, ApiError) and str(error).startswith('Unknown field: '):
+                        error = ApiError(error.kind, 'Field "' + str(error).removeprefix('Unknown field: ') + '" not found in current note')
+                    pending.resolve(True if error is None else None, error)
+                value.then(finished)
+                return pending
+            return True
+        if name in ('guiReviewActive', 'guiCurrentCard', 'guiStartCardTimer', 'guiShowQuestion',
+                    'guiShowAnswer', 'guiPlayAudio', 'guiAnswerCard') and self.owner.reviewer() is None:
+            raise ApiError('invalidState', 'reviewer is not available')
         if name == 'guiReviewActive':
             return call('reviewer.get')['active']
         if name == 'guiCurrentCard':
@@ -499,6 +561,7 @@ class Legacy:
         if name == 'getDeckStats':
             result = {}
             for deck in p['decks']:
+                self.s('decks.create', name=deck)
                 value = self.s('decks.getCounts', deck=self.ref(deck))
                 result[value['deckId']] = {'deck_id': int(value['deckId']), 'name': deck, 'new_count': value['new'],
                                            'learn_count': value['learning'], 'review_count': value['review'], 'total_in_deck': value['total']}
@@ -555,7 +618,29 @@ class Legacy:
                 result = [item['canAdd'] for item in result]
             return result if name.startswith('canAddNotes') else result[0]
         if name in ('addNote', 'addNotes'):
-            values = self.add_notes(p.get('notes', [p.get('note')]), True)
+            if name == 'addNotes':
+                prepared, indices, errors = [], [], {}
+                for index, source in enumerate(p['notes']):
+                    try:
+                        prepared.append(self.created_note(source, pure=True))
+                        indices.append(index)
+                    except Exception as error:
+                        errors[index] = str(error)
+                _, failures = self.service.prepare_notes(prepared)
+                for failure in failures:
+                    errors[indices[failure['index']]] = self.validation_error({'items': [failure]}) or failure['error']['message']
+                if errors:
+                    raise ApiError('validationFailed', str([errors[index] for index in sorted(errors)]), {'items': failures})
+            try:
+                values = self.add_notes(p.get('notes', [p.get('note')]), True)
+            except Exception as error:
+                if name == 'addNotes':
+                    items = error.details.get('items', []) if isinstance(error, ApiError) and error.details else []
+                    errors = [self.validation_error({'items': [item]}) or item.get('error', {}).get('message', str(error))
+                              for item in items]
+                    raise ApiError(getattr(error, 'kind', 'internalError'), str(errors or [str(error)]),
+                                   getattr(error, 'details', None)) from error
+                raise
             return values if name == 'addNotes' else values[0]
         if name in ('updateNote', 'updateNoteFields', 'updateNoteTags'):
             source = p['note']
@@ -612,7 +697,7 @@ class Legacy:
         if name in ('addTags', 'removeTags'):
             tags = self.service.col.tags.split(p['tags']) if isinstance(p['tags'], str) else list(p['tags'])
             method = 'tags.remove' if name == 'removeTags' or not p.get('add', True) else 'tags.add'
-            self.unwrap(self.s(method, noteIds=self.ids(p['notes']), tags=tags))
+            self.unwrap(self.s(method, noteIds=self.ids(p['notes']), tags=tags), missing=True)
             return None
         if name == 'getTags':
             return self.s('tags.list')
@@ -620,8 +705,11 @@ class Legacy:
             self.s('tags.deleteUnused')
             return None
         if name in ('replaceTags', 'replaceTagsInAllNotes'):
+            ids = self.ids(p['notes']) if name == 'replaceTags' else None
+            if ids is not None:
+                ids = [value['id'] for value in self.unwrap(self.s('notes.getMany', ids=ids), missing=True) if value]
             self.s('tags.replace', **{'from': p['tag_to_replace'], 'to': p['replace_with_tag']},
-                   **({'noteIds': self.ids(p['notes'])} if name == 'replaceTags' else {'allNotes': True}))
+                   **({'noteIds': ids} if name == 'replaceTags' else {'allNotes': True}))
             return None
         if name in ('findNotes', 'findCards'):
             return [] if p['query'] is None else [int(id) for id in self.all_pages('notes.search' if name == 'findNotes' else 'cards.search', query=p['query'])]
@@ -656,9 +744,13 @@ class Legacy:
             values = self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])), missing=True)
             return list(dict.fromkeys(int(value['noteId']) for value in values if value))
         if name in ('suspend', 'unsuspend'):
+            for id in p['cards']:
+                self.s('cards.get', id=str(id))
             values = self.unwrap(self.s('cards.setSuspended', ids=self.ids(p['cards']), suspended=False if name == 'unsuspend' else p['suspend']))
-            return any(value['changed'] for value in values)
+            return None if name == 'unsuspend' else any(value['changed'] for value in values)
         if name in ('suspended', 'areSuspended'):
+            if name == 'suspended':
+                return self.s('cards.get', id=str(p['card']))['scheduling']['queue'] == 'suspended'
             ids = [p['card']] if name == 'suspended' else p['cards']
             values = self.unwrap(self.s('cards.getMany', ids=self.ids(ids)), missing=name != 'suspended')
             result = [value['scheduling']['queue'] == 'suspended' if value else None for value in values]
@@ -666,33 +758,40 @@ class Legacy:
         if name == 'areDue':
             result = []
             for id in p['cards']:
-                card = self.s('cards.get', id=str(id))
-                value = self.s('scheduling.getDue', cardId=str(id))
-                result.append(value['dueNow'] or (card['scheduling']['queue'] == 'new' and value['available']))
+                if self.all_pages('cards.search', query='cid:{} is:new'.format(id)):
+                    result.append(True)
+                else:
+                    # Historical queries depend on the latest review, including
+                    # their IndexError when the card has no review history.
+                    import time
+                    date, ivl = self.service.col.db.all('select id/1000.0, ivl from revlog where cid = ?', id)[-1]
+                    result.append(bool(self.all_pages('cards.search', query='cid:{} is:due'.format(id)))
+                                  if ivl >= -1200 else date - ivl <= time.time())
             return result
         if name == 'getIntervals':
             result = []
             for id in p['cards']:
-                state = self.s('scheduling.get', cardId=str(id))
-                if state['type'] == 'new':
+                if self.all_pages('cards.search', query='cid:{} is:new'.format(id)):
                     result.append(0)
-                elif p['complete']:
-                    result.append([self.signed(review['interval']) for review in self.all_pages('reviews.list', cardIds=[str(id)], includeManual=False)])
                 else:
-                    result.append(-state['learningIntervalSeconds'] if state['learningIntervalSeconds'] is not None else state['intervalDays'])
+                    intervals = self.service.col.db.list('select ivl from revlog where cid = ?', id)
+                    result.append(intervals if p['complete'] else intervals[-1])
             return result
         if name in ('getEaseFactors', 'setEaseFactors'):
             if name == 'getEaseFactors':
-                return [value['scheduling']['sm2EasePermille'] for value in self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])))]
-            if len(p['cards']) != len(p['easeFactors']):
-                raise ApiError('invalidParams', 'Card/ease arrays must have equal lengths.')
+                return [value['scheduling']['sm2EasePermille'] if value else None
+                        for value in self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])), missing=True)]
             result = []
-            for id, factor in zip(p['cards'], p['easeFactors']):
+            for index, id in enumerate(p['cards']):
                 try:
-                    self.s('advanced.cards.update', cardId=str(id), patch={'sm2EasePermille': factor})
-                    result.append(True)
-                except Exception:
+                    self.s('cards.get', id=str(id))
+                except ApiError as error:
+                    if error.kind != 'notFound':
+                        raise
                     result.append(False)
+                    continue
+                self.s('advanced.cards.update', cardId=str(id), patch={'sm2EasePermille': p['easeFactors'][index]})
+                result.append(True)
             return result
         if name == 'setSpecificValueOfCard':
             return self.expert_card(p)
@@ -736,9 +835,15 @@ class Legacy:
             deck = None if p['wholeCollection'] else {'id': str(self.service.col.decks.selected())}
             return self.s('statistics.getHtml', **({'deck': deck} if deck else {}))['html']
         if name == 'getLatestReviewID':
+            self.s('decks.create', name=p['deck'])
             return int(self.s('reviews.getLatestId', deck=self.ref(p['deck']))['id'] or 0)
         if name in ('cardReviews', 'getReviewsOfCards'):
-            params = {'deck': self.ref(p['deck']), **({'afterId': str(p['startID'])} if p['startID'] else {})} if name == 'cardReviews' else {'cardIds': self.ids(p['cards'])}
+            if name == 'cardReviews':
+                self.s('decks.create', name=p['deck'])
+                params = {'deck': self.ref(p['deck']), **({'afterId': str(p['startID'])} if p['startID'] else {})}
+            else:
+                values = self.unwrap(self.s('cards.getMany', ids=self.ids(p['cards'])), missing=True)
+                params = {'cardIds': [value['id'] for value in values if value]}
             reviews = self.all_pages('reviews.list', **params)
             if name == 'cardReviews':
                 return [[int(row['id']), int(row['cardId']), row['syncSequence'], RATINGS.index(row['rating']) + 1 if row['rating'] else 0,
@@ -764,6 +869,8 @@ class Legacy:
                 self.s('advanced.reviews.import', reviews=values)
             return None
         if name == 'importPackage':
+            with open(p['path'], 'rb'):
+                pass
             self.s('packages.import', path=p['path'])
             return True
         if name == 'exportPackage':
@@ -793,6 +900,7 @@ class Legacy:
         if any(key in p['keys'] for key in ('did', 'flags')) and len(p['keys']) != 1:
             raise ApiError('compatibilityError', 'Separate deck/flag edits from metadata edits.')
         try:
+            self.s('cards.get', id=str(p['card']))
             values = dict(zip(p['keys'], p['newValues']))
             if 'did' in values:
                 self.unwrap(self.s('cards.move', ids=[str(p['card'])], deck={'id': str(values['did'])}))
@@ -869,6 +977,8 @@ class Legacy:
                 raise ApiError('invalidParams', 'Must provide at least one field for inOrderFields')
             if not p['cardTemplates']:
                 raise ApiError('invalidParams', 'Must provide at least one card for cardTemplates')
+            if self.service.col.models.by_name(p['modelName']) is not None:
+                raise ApiError('conflict', 'Model name already exists')
             templates = [{'name': template.get('Name', 'Card ' + str(index + 1)), 'questionHtml': template['Front'], 'answerHtml': template['Back']}
                          for index, template in enumerate(p['cardTemplates'])]
             css = p['css'] if p['css'] is not None else self.service.col.models.new(p['modelName'])['css']

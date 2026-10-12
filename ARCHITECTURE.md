@@ -59,9 +59,11 @@ Disconnecting a socket does not cancel accepted work.
 
 Legacy standalone GUI actions preserve accepted-return timing where documented.
 Legacy `multi` waits for each final outcome, including nested batches. It preflights
-the full request tree for malformed actions, depth/count limits and final exit
+the full request tree for malformed containers, nesting depth and final exit
 ordering. Neither command form creates a transaction across items. Exit begins
 only after outstanding socket replies drain.
+Legacy batches preserve unbounded action counts for whole-vault Obsidian syncs;
+the HTTP request size limit still applies. The v1 batch count limit is separate.
 
 ## Sessions and editor coordination
 

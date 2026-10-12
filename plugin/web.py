@@ -239,6 +239,8 @@ def format_success_reply(api_version, result):
 
 
 def format_exception_reply(_api_version, exception):
+    if isinstance(exception, ApiError) and exception.kind == 'collectionUnavailable':
+        return {"result": None, "error": 'collection is not available'}
     return {"result": None, "error": str(exception)}
 
 

@@ -91,7 +91,7 @@ def test_legacy_note_errors_keep_client_compatible_wording(native, failure, mess
     for action, params in [('addNote', {'note': source}), ('addNotes', {'notes': [legacy_note('new'), source]})]:
         with pytest.raises(ApiError) as caught:
             old(native, action, **params)
-        assert str(caught.value) == message
+        assert str(caught.value) == (str([message]) if action == 'addNotes' else message)
     assert service.col.note_count() == 1
     if failure == 'duplicate':
         result = call(service, 'notes.validate', note=note_input('existing'))
@@ -106,7 +106,7 @@ def test_legacy_batch_duplicate_and_empty_question_errors(native):
     owner, service = native
     with pytest.raises(ApiError) as caught:
         old(native, 'addNotes', notes=[legacy_note('batch'), legacy_note('batch')])
-    assert str(caught.value) == 'cannot create note because it is a duplicate'
+    assert str(caught.value) == "['cannot create note because it is a duplicate']"
     assert caught.value.details['items'][0]['error']['data']['details']['issues'][0]['type'] == 'duplicate'
     model = service.col.models.by_name('Basic')
     model['tmpls'][0]['qfmt'] = '{{Back}}'
@@ -498,7 +498,7 @@ def test_legacy_scheduling_metadata_and_reviews(native):
     assert old(native, 'suspend', cards=[card])
     assert old(native, 'suspended', card=card)
     assert old(native, 'areSuspended', cards=[card, 999]) == [True, None]
-    assert old(native, 'unsuspend', cards=[card])
+    assert old(native, 'unsuspend', cards=[card]) is None
     assert not old(native, 'suspended', card=card)
     assert old(native, 'setEaseFactors', cards=[card], easeFactors=[2400]) == [True]
     assert old(native, 'getEaseFactors', cards=[card]) == [2400]

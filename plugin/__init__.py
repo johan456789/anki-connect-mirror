@@ -124,7 +124,13 @@ class AnkiConnect:
             aliases = [(v, alias) for v, alias in getattr(method, 'versions', []) if v <= version]
             alias = max(aliases)[1] if aliases else methodName
             if alias == name:
-                bound = inspect.signature(method).bind(**params)
+                try:
+                    bound = inspect.signature(method).bind(**params)
+                except TypeError:
+                    # The real call binder retains the historical public error.
+                    # Binding failed, so the method body cannot execute.
+                    method(**params)
+                    raise
                 bound.apply_defaults()
                 return methodName, dict(bound.arguments)
         raise Exception('unsupported action')
@@ -186,18 +192,20 @@ class AnkiConnect:
     def validate_multi(self, actions, depth=0, state=None):
         """Preflight the entire tree before admitting any executable action."""
         if state is None:
-            state = {'count': 0, 'exit': False}
+            state = {'exit': False}
         if depth > 16:
             raise Exception('multi nesting limit exceeded')
         if not isinstance(actions, list):
             raise Exception('multi actions must be an array')
+        # Legacy clients batch whole vaults; v1's item limit does not apply here.
         for item in actions:
-            state['count'] += 1
-            if state['count'] > 100:
-                raise Exception('multi action limit exceeded')
             if not isinstance(item, dict):
                 raise Exception('multi actions must be request objects')
-            name, params = self.resolve_action(item.get('action', ''), item.get('version', 4), item.get('params', {}))
+            try:
+                name, params = self.resolve_action(item.get('action', ''), item.get('version', 4), item.get('params', {}))
+            except Exception:
+                # Invalid actions have their own error slot and cannot execute.
+                continue
             if name == 'multi':
                 self.validate_multi(params['actions'], depth + 1, state)
             else:

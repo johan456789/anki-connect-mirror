@@ -97,16 +97,21 @@ def test_dispatcher_validation_and_notifications():
     assert not invoked
 
 
-def test_bulk_atomic_validation_and_media_ownership(native, tmp_path):
+def test_bulk_atomic_validation_and_media_ownership(native, tmp_path, monkeypatch):
     owner, service = native
     legacy = Legacy(owner, service)
     legacy.call('createDeck', {'deck': 'Test'})
     existing = service.store_bytes('existing.txt', b'original', 'replace')
     service.store_bytes('unrelated.txt', b'keep')
     source = {'modelName': 'Basic', 'deckName': 'Test', 'fields': {'Front': 'a', 'Back': 'b'},
-              'audio': [{'filename': 'existing.txt', 'path': str(tmp_path / 'missing'), 'fields': ['Back']}]}
-    with pytest.raises(FileNotFoundError):
-        legacy.add_notes([source], True)
+              'audio': [{'filename': 'existing.txt', 'data': 'aW5jb21pbmc=', 'fields': ['Back']}]}
+    def fail_after_media_install(*args):
+        assert (Path(service.col.media.dir()) / 'existing.txt').read_bytes() == b'incoming'
+        raise RuntimeError('native note write failed')
+    with monkeypatch.context() as patch:
+        patch.setattr(service.col, 'add_notes', fail_after_media_install)
+        with pytest.raises(RuntimeError, match='native note write failed'):
+            legacy.add_notes([source], True)
     assert (Path(service.col.media.dir()) / 'existing.txt').read_bytes() == b'original'
     assert (Path(service.col.media.dir()) / 'unrelated.txt').read_bytes() == b'keep'
     assert not service.col.find_notes('')
@@ -396,9 +401,12 @@ def test_nested_multi_preflights_exit_limits_and_shapes(admitted):
     nested = lambda actions: {'action': 'multi', 'version': 6, 'params': {'actions': actions}}
     exit_request = {'action': 'guiExitAnki', 'version': 6}
     create = {'action': 'createDeck', 'version': 6, 'params': {'deck': 'Must not exist'}}
+    too_deep = {'action': 'version'}
+    for _ in range(18):
+        too_deep = nested([too_deep])
     for actions in ([create, nested([exit_request]), {'action': 'version'}],
-                    [create, nested([{'action': 'version'}] * 99)],
-                    [create, nested([None])]):
+                    [create, too_deep], [create, nested([None])],
+                    [create, {'action': 'multi', 'params': {'actions': {}}}]):
         response = owner.handler_async(nested(actions))
         assert response.done and response.value['error']
         assert not work and not owner.runtime.exit_requested

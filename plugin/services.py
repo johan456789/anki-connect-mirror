@@ -306,6 +306,16 @@ class Services:
     def notes_createMany(self, notes, atomic=False):
         if not atomic:
             return self.many(notes, lambda data: self.notes_create(**data))
+        prepared, errors = self.prepare_notes(notes)
+        if errors:
+            raise ApiError('validationFailed', 'Atomic batch validation failed.', {'items': errors})
+        if prepared:
+            self.change(self.col.add_notes(prepared))
+        return {'items': [{'index': index, 'result': {'noteId': str(req.note.id), 'cardIds': [str(id) for id in req.note.card_ids()]}}
+                          for index, req in enumerate(prepared)]}
+
+    def prepare_notes(self, notes):
+        """Validate an ordered batch without writing it, including duplicates."""
         from anki.collection import AddNoteRequest
         prepared, errors, seen = [], [], []
         for index, data in enumerate(notes):
@@ -334,12 +344,7 @@ class Services:
                 seen.append((note, deck))
             except Exception as error:
                 errors.append({'index': index, 'error': error_record(error)})
-        if errors:
-            raise ApiError('validationFailed', 'Atomic batch validation failed.', {'items': errors})
-        if prepared:
-            self.change(self.col.add_notes(prepared))
-        return {'items': [{'index': index, 'result': {'noteId': str(req.note.id), 'cardIds': [str(id) for id in req.note.card_ids()]}}
-                          for index, req in enumerate(prepared)]}
+        return prepared, errors
 
     def notes_update(self, id, patch):
         note = self.note(id)

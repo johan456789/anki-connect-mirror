@@ -2,7 +2,7 @@
 """Real-GUI smoke checks, run by tools/test.sh/tools/test.ps1 by default; uses disposable Anki profiles.
 
 Run with the pinned environment and a working display:
-    python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|exit|legacy-exit]
+    python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|obsidian|exit|legacy-exit]
 
 No sync credentials are used. Profiles/files remain in the OS temp directory for diagnostics.
 Processes exit after checks to isolate native Qt/WebEngine teardown; application
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Each scenario runs in a fresh process/profile to isolate Qt WebEngine teardown.
 scenario = sys.argv[1] if len(sys.argv) > 1 else 'all'
-scenarios = ['editors', 'browser', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'exit', 'legacy-exit']
+scenarios = ['editors', 'browser', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'obsidian', 'exit', 'legacy-exit']
 if scenario == 'all':
     import subprocess
     failures = []
@@ -159,6 +159,15 @@ try:
             assert draft['fields']['Front'] == 'Draft question ' + str(svelte), draft
             assert draft['noteId'] is None, draft
             print('PASS open Add', draft['variant'], flush=True)
+            for invalid, message in [
+                ({'deckName': 'Missing'}, 'Deck "Missing" not found'),
+                ({'modelName': 'Missing'}, 'Model "Missing" not found'),
+                ({'fields': {'Missing': 'value'}}, 'Field "Missing" not found in current note'),
+            ]:
+                reply = result(owner.handler_async({'action': 'guiAddNoteSetData', 'version': 6,
+                                                    'params': {'note': invalid, 'append': True}}))
+                assert reply == {'result': None, 'error': message}, reply
+            print('PASS historical draft errors', draft['variant'], flush=True)
             updated = call('editors.updateDraft', editorId=draft['id'], mode='append', patch={'fields': {'Back': ' appended'}, 'tags': ['extra']})
             assert updated['fields']['Back'] == 'Draft answer appended', updated
             import base64
@@ -502,6 +511,68 @@ try:
         finally:
             utils.askUser = original_ask
         print('PASS collection package cancellation/import/reopen/session invalidation', flush=True)
+    if scenario == 'obsidian':
+        """multi/createDeck/addNote/notesInfo/getTags/updateNoteFields/deleteNotes/
+        storeMediaFile/changeDeck/removeTags/addTags through real HTTP and Qt.
+        """
+        import json
+        import threading
+        import urllib.request
+        from plugin import util
+        from tests_api.test_obsidian import file_requests, phase_one, phase_two, request, parse, source
+        setting = util.setting
+        overrides = {'webBindPort': 0, 'webCorsOriginList': ['http://localhost', 'app://obsidian.md']}
+        util.setting = lambda name: overrides[name] if name in overrides else setting(name)
+        owner.startWebServer()
+        port = owner.server.sock.getsockname()[1]
+        def exchange(payload):
+            replies = []
+            def send():
+                try:
+                    req = urllib.request.Request('http://127.0.0.1:' + str(port),
+                        json.dumps(payload).encode(), {'Origin': 'app://obsidian.md'})
+                    with urllib.request.urlopen(req, timeout=30) as response:
+                        assert response.headers['Access-Control-Allow-Origin'] == 'app://obsidian.md'
+                        replies.append(json.load(response))
+                except BaseException as error:
+                    replies.append(error)
+            thread = threading.Thread(target=send, daemon=True)
+            thread.start()
+            wait_until(lambda: bool(replies), timeout=35, description='Obsidian HTTP sync')
+            thread.join(timeout=1)
+            assert not isinstance(replies[0], BaseException), replies
+            return parse(replies[0])
+        assert 'Basic' in exchange(request('modelNames'))
+        picture = base / 'vault picture.png'
+        picture.write_bytes(b'Obsidian GUI media')
+        files = [file_requests(new=[source('Obsidian GUI ' + str(i)) for i in range(45)],
+                              media=[{'filename': 'picture.png', 'path': str(picture)}])]
+        files.extend(file_requests() for _ in range(39))
+        first = exchange(phase_one(files))
+        ids = [parse(reply) for reply in parse(parse(first[1])[0])]
+        assert len(ids) == 45 and len(set(ids)) == 45 and all(type(id) is int for id in ids)
+        assert parse(parse(first[6])[0]) == 'picture.png'
+        assert (Path(aqt.mw.col.media.dir()) / 'picture.png').read_bytes() == picture.read_bytes()
+        files = [file_requests(edits=[{'id': id, 'fields': {'Back': 'edited <img src="picture.png">'},
+                                      'tags': ['updated']} for id in ids[:-1]],
+                               deleted=[ids[-1]], deck='Obsidian::Moved')]
+        first = exchange(phase_one(files))
+        infos = [parse(reply) for reply in parse(first[2])]
+        second = exchange(phase_two(files, infos, parse(first[3])))
+        assert [parse(reply) for reply in parse(second[0])] == [None]
+        assert [parse(reply) for reply in parse(second[1])] == [None]
+        assert [parse(reply) for reply in parse(parse(second[2])[0])] == [None] * 44
+        for id in ids[:-1]:
+            actual = aqt.mw.col.get_note(id)
+            assert actual['Back'] == 'edited <img src="picture.png">' and actual.tags == ['updated']
+            assert all(aqt.mw.col.decks.name(card.did) == 'Obsidian::Moved' for card in actual.cards())
+        assert aqt.mw.col.find_notes('nid:' + str(ids[-1])) == []
+        assert aqt.mw.col.note_count() == 45  # 44 synced notes plus the scenario's setup note.
+        assert aqt.mw._background_op_count == 0
+        owner.server.close()
+        owner.timer.stop()
+        util.setting = setting
+        print('PASS Obsidian nested HTTP sync, native Qt completion, media, edits, deck moves, tags and deletion', flush=True)
     if scenario in ('exit', 'legacy-exit'):
         import json
         import threading

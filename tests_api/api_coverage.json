@@ -2,12 +2,105 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_obsidian.py",
+      "case": "test_obsidian_single_file_bulk_add",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "multi",
+        "createDeck",
+        "addNote",
+        "notesInfo",
+        "getTags",
+        "deleteNotes",
+        "changeDeck"
+      ],
+      "notes": "Obsidian_to_Anki 3.6.0 nested version-6 HTTP batches with 44, 45 and 300 new notes, strict nested envelopes, numeric IDs, persisted ordered fields, tags, and empty operations. Regresses the accidental 100-node legacy limit."
+    },
+    {
+      "source": "tests_api/test_obsidian.py",
+      "case": "test_obsidian_vault_add_edit_move_tags_delete_and_media",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "modelNames",
+        "modelFieldNames",
+        "multi",
+        "createDeck",
+        "addNote",
+        "notesInfo",
+        "getTags",
+        "updateNoteFields",
+        "deleteNotes",
+        "storeMediaFile",
+        "changeDeck",
+        "removeTags",
+        "addTags"
+      ],
+      "notes": "Complete native 20-file vault sync/resync: 120 Basic/Cloze notes, 140 cards, local-path/base64 media, HTML/backlinks, field updates, deck moves, tag replacement and explicit deletion. Asserts unchanged note/card IDs, scheduling and review history, and unrelated-note preservation. Qt admission is controlled; Obsidian parser/UI is not executed."
+    },
+    {
+      "source": "tests_api/test_obsidian.py",
+      "case": "test_obsidian_changed_empty_files",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "multi",
+        "notesInfo",
+        "getTags",
+        "deleteNotes",
+        "changeDeck"
+      ],
+      "notes": "Forty changed files with no cards produce nested empty batches through both HTTP sync phases; no notes are created."
+    },
+    {
+      "source": "tests_api/test_obsidian.py",
+      "case": "test_obsidian_nested_item_failures_preserve_order_and_successes",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "storeMediaFile"
+      ],
+      "notes": "Native duplicate rejection and missing local-media file retain their per-item version-6 error slots; successful following notes/media persist in order and outer/nested multi envelopes remain successful."
+    },
+    {
+      "source": "tools/smoke_gui.py",
+      "case": "obsidian",
+      "layer": "http-gui",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "modelNames",
+        "multi",
+        "createDeck",
+        "addNote",
+        "notesInfo",
+        "getTags",
+        "updateNoteFields",
+        "deleteNotes",
+        "storeMediaFile",
+        "changeDeck",
+        "removeTags",
+        "addTags"
+      ],
+      "notes": "Real HTTP listener and Qt/native task completion in a disposable profile: 45 new notes across 40 changed files, local media, 44 edits, deck moves, tag replacement and explicit deletion. Asserts response CORS, native effects, numeric IDs and drained collection work. Obsidian UI is not executed."
+    },
+    {
       "source": "tests_api/test_cors.py",
       "case": "test_new_origin_preflights_and_awaits_permission",
       "layer": "validation-only",
       "outcome": "not-executed",
-      "v1": ["access.requestPermission"],
-      "legacy": ["requestPermission"],
+      "v1": [
+        "access.requestPermission"
+      ],
+      "legacy": [
+        "requestPermission"
+      ],
       "notes": "HTTP preflight permits JSON permission discovery from new origins without a key. Mocked deferred decisions check grant/deny reply headers and transport-supplied origin context; native permission dialogs are not executed."
     },
     {
@@ -15,8 +108,12 @@
       "case": "test_preflight_does_not_bypass_origin_or_api_key",
       "layer": "validation-only",
       "outcome": "not-executed",
-      "v1": ["collection.get"],
-      "legacy": ["version"],
+      "v1": [
+        "collection.get"
+      ],
+      "legacy": [
+        "version"
+      ],
       "notes": "Preflight does not authorize subsequent actions: rejected origins never dispatch on either endpoint, and v1 requires the configured Bearer key. Allowed dispatch uses a fake callback; native collection methods are not executed."
     },
     {
@@ -26,10 +123,23 @@
       "outcome": "success",
       "v1": [],
       "legacy": [
-        "version", "deckNames", "modelNames", "modelFieldNames", "apiReflect",
-        "storeMediaFile", "addNote", "canAddNotesWithErrorDetail", "canAddNotes",
-        "findNotes", "multi", "notesInfo", "findCards", "cardsInfo", "suspend",
-        "updateNoteFields", "addNotes"
+        "version",
+        "deckNames",
+        "modelNames",
+        "modelFieldNames",
+        "apiReflect",
+        "storeMediaFile",
+        "addNote",
+        "canAddNotesWithErrorDetail",
+        "canAddNotes",
+        "findNotes",
+        "multi",
+        "notesInfo",
+        "findCards",
+        "cardsInfo",
+        "suspend",
+        "updateNoteFields",
+        "addNotes"
       ],
       "notes": "Yomitan version-2 requests through HTTP reply formatting and controlled Qt admission, with and without an API key. Native collection/media effects, duplicate lookup, versionless multi entries, numeric IDs, missing-record sentinels, suspension, JSON-null overwrite replies, and 100-note deck-generation batches are asserted."
     },
@@ -39,7 +149,9 @@
       "layer": "controlled-admission",
       "outcome": "failure",
       "v1": [],
-      "legacy": ["sync"],
+      "legacy": [
+        "sync"
+      ],
       "notes": "Version-2 sync without credentials returns the historical auth error through HTTP formatting. No network sync account or completion is exercised."
     },
     {
@@ -48,7 +160,9 @@
       "layer": "controlled-admission",
       "outcome": "success",
       "v1": [],
-      "legacy": ["canAddNotesWithErrorDetail"],
+      "legacy": [
+        "canAddNotesWithErrorDetail"
+      ],
       "notes": "Native notes in sibling decks and another note type verify Yomitan root-deck/checkChildren and collection/checkAllModels options through version-2 HTTP formatting and controlled admission."
     },
     {
@@ -1120,6 +1234,210 @@
         "updateNoteModel"
       ],
       "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_missing_entities_and_failure_sentinels",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addTags",
+        "areDue",
+        "areSuspended",
+        "cardsInfo",
+        "cardsModTime",
+        "cardsToNotes",
+        "cloneDeckConfigId",
+        "deleteMediaFile",
+        "deleteNotes",
+        "exportPackage",
+        "getDeckConfig",
+        "getEaseFactors",
+        "getIntervals",
+        "getNoteTags",
+        "getReviewsOfCards",
+        "guiAddNoteSetData",
+        "guiSelectCard",
+        "guiSelectedNotes",
+        "notesInfo",
+        "notesModTime",
+        "removeDeckConfigId",
+        "removeTags",
+        "replaceTags",
+        "retrieveMediaFile",
+        "setDeckConfigId",
+        "setEaseFactors",
+        "setSpecificValueOfCard",
+        "storeMediaFile",
+        "suspend",
+        "suspended",
+        "unsuspend",
+        "updateNoteTags"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_nested_failures_keep_item_versions_credentials_and_order",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "createDeck",
+        "multi",
+        "version"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_bulk_note_failure_aggregates_errors_and_rolls_back",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNotes"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_missing_reviewer_error",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "guiAnswerCard",
+        "guiCurrentCard",
+        "guiPlayAudio",
+        "guiReviewActive",
+        "guiShowAnswer",
+        "guiShowQuestion",
+        "guiStartCardTimer"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_browser_sort_errors",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "guiBrowse"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_collection_unavailable_keeps_wording_without_changing_v1",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "findNotes",
+        "modelNames"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_media_source_priority_whitespace_and_download_error",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "storeMediaFile"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_missing_package_retains_os_error",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "importPackage"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_review_reads_create_missing_decks",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "cardReviews",
+        "getLatestReviewID"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_deck_stats_create_missing_decks",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "getDeckStats"
+      ],
+      "notes": "Exact pre-rewrite legacy replies using a disposable native collection and controlled admission. Includes versions 2, 4 and 6 where parametrized; external media download is mocked, GUI windows are not opened."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_every_legacy_action_argument_errors_match_baseline",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "multi"
+      ],
+      "notes": "209 frozen binding errors cover all 122 retained actions at versions 2, 4 and 6, in both synchronous and asynchronous dispatch. Method bodies are not executed."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_attachment_acquisition_errors_are_embedded_in_fields",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "updateNoteFields"
+      ],
+      "notes": "Disposable native collection with controlled admission; checks historical attachment error embedding, media source precedence/collision behavior, or ordered partial scheduling effects. No external network or GUI execution."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_note_media_priority_whitespace_and_collision",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "storeMediaFile",
+        "updateNoteFields"
+      ],
+      "notes": "Disposable native collection with controlled admission; checks historical attachment error embedding, media source precedence/collision behavior, or ordered partial scheduling effects. No external network or GUI execution."
+    },
+    {
+      "source": "tests_api/test_legacy_errors.py",
+      "case": "test_legacy_short_ease_factor_list_retains_error_and_prior_updates",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "setEaseFactors"
+      ],
+      "notes": "Disposable native collection with controlled admission; checks historical attachment error embedding, media source precedence/collision behavior, or ordered partial scheduling effects. No external network or GUI execution."
     }
   ],
   "unreferenced": {

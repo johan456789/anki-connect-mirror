@@ -87,7 +87,7 @@ Origin checks apply separately using the configured origin lists.
 
 For versions 5 and 6, successful requests return `{"result":...,"error":null}`.
 Failures return `{"result":null,"error":"message"}`. Error messages are strings;
-applications should not depend on exact wording.
+historical compatibility messages and failure sentinels are preserved. Native backend and operating-system errors can vary by environment.
 
 Omitting `version` selects version 4. Successful calls at version 4 or below
 return a bare JSON result, without the envelope, including the literal `null`
@@ -119,7 +119,10 @@ accepted GUI work. It continues after item errors and preserves each item's own
 version and key; the outer request does not supply missing credentials or versions
 to children. It provides no database or media transaction. Profile switching is
 allowed; subsequent actions use the destination after a successful switch.
-Nesting is limited to 16 levels and 100 total request nodes, counting containers.
+Nesting is limited to 16 levels. Legacy batches have no action-count limit, so
+clients such as Obsidian_to_Anki can submit a whole vault's nested sync requests.
+The HTTP request size limit still applies; v1 batch limits do not apply to legacy
+`multi` requests.
 `guiExitAnki` must be the last executable item, including nested items.
 
 Each action below links to its v1 equivalent. Native tests cover both protocols;
@@ -159,10 +162,11 @@ or null, the creation deck is used. `checkChildren` and `checkAllModels` default
 to false.
 
 The optional `audio`, `video`, and `picture` properties accept one media object or
-an array. Each object needs `filename` and exactly one of `data`, `path`, or `url`.
+an array. Each object needs `filename` and a nonempty `data`, `path`, or `url`. When multiple sources are supplied, the first nonempty source wins in that order.
 Its `fields` array names fields to append the reference to. `skipHash` is an
 optional MD5 digest of incoming bytes to skip. Acquisitions happen before owned
 media writes; media rollback is separate from the collection transaction.
+Attachment acquisition errors are HTML-escaped and appended to the selected fields, preserving historical note behavior. Standalone `storeMediaFile` returns an error for the same failure. Size limits, unsafe filenames, and media transaction failures still raise errors.
 Eligibility checks do not download or write files.
 
 Legacy note validation and creation preserve the historical error strings:
@@ -180,7 +184,7 @@ Return each card’s stored SM-2 ease factor in permille, in input order.
 
 **Parameters:** `getEaseFactors(cards)`
 
-**Returns:** Integer array in input order.
+**Returns:** Integer array in input order, with null for missing cards.
 
 **Completion:** completed.
 
@@ -207,11 +211,11 @@ Set SM-2 ease factors in permille, one value per card. Returns a boolean array i
 
 **Parameters:** `setEaseFactors(cards, easeFactors)`
 
-**Returns:** Per-card booleans; false for missing or rejected cards.
+**Returns:** Per-card booleans; false for missing cards. Invalid values for existing cards raise an error.
 
 **Completion:** completed.
 
-**Behavior:** Reject mismatched lengths before writes; native undo/notifications replace skip_undo_entry.
+**Behavior:** Process cards in order. Missing cards are skipped without reading their factor. A missing factor for an existing card raises an index error; earlier updates remain applied. Native undo/notifications replace skip_undo_entry.
 
 **v1 equivalent:** [advanced.cards.update](API_V1.md#advancedcardsupdate).
 
@@ -298,16 +302,15 @@ otherwise.
 
 ### `unsuspend`
 
-Unsuspend cards by card ID; returns `true` if successful (at least one card was previously suspended) or `false`
-otherwise.
+Unsuspend cards by card ID.
 
 **Parameters:** `unsuspend(cards)`
 
-**Returns:** true if any distinct card changed, else false.
+**Returns:** null.
 
 **Completion:** completed.
 
-**Behavior:** Returns a boolean; the historical implementation returned null.
+**Behavior:** Missing cards raise the historical card-not-found error.
 
 **v1 equivalent:** [cards.setSuspended](API_V1.md#cardssetsuspended).
 
@@ -381,15 +384,15 @@ exist returns `null`.
 
 ### `areDue`
 
-Return whether each card is currently due using native queue timing. Unsuspended, unburied new cards are available; suspended and buried cards are not due.
+Return the historical due result using the latest review timestamp and interval. New cards return true.
 
 **Parameters:** `areDue(cards)`
 
-**Returns:** Boolean array; missing card raises.
+**Returns:** Boolean array; a non-new card without review history, including a missing card, raises an index error.
 
 **Completion:** completed.
 
-**Behavior:** queue-aware, no revlog dependency or suspended-new positives.
+**Behavior:** Retains historical review-history timing, including true for suspended new cards. Use v1 scheduling.getDue for native queue timing.
 
 **v1 equivalent:** [scheduling.getDue](API_V1.md#schedulinggetdue).
 
@@ -410,7 +413,7 @@ Return whether each card is currently due using native queue timing. Unsuspended
 
 ### `getIntervals`
 
-Return current scheduling intervals, or ordered nonmanual history when `complete=true`. Negative values represent seconds and positive values represent days. New cards return scalar `0`, including in complete mode.
+Return the latest recorded review interval, or all ordered review intervals including manual entries when `complete=true`. Negative values represent seconds and positive values represent days. New cards return scalar `0`, including in complete mode.
 
 **Parameters:** `getIntervals(cards, complete=False)`
 
@@ -418,7 +421,7 @@ Return current scheduling intervals, or ordered nonmanual history when `complete
 
 **Completion:** completed.
 
-**Behavior:** explicitly current state vs ordered history; missing history returns [] in complete mode instead of IndexError.
+**Behavior:** Empty history returns [] in complete mode and raises an index error otherwise. New cards return 0 in either mode.
 
 **v1 equivalent:** [scheduling.get](API_V1.md#schedulingget), [reviews.list](API_V1.md#reviewslist).
 
@@ -976,7 +979,7 @@ Gets statistics such as total cards and cards due for the given decks.
 
 **Completion:** completed.
 
-**Behavior:** unknown deck raises; deck count unchanged.
+**Behavior:** Unknown decks are created and return zero counts.
 
 **v1 equivalent:** [decks.getCounts](API_V1.md#decksgetcounts).
 
@@ -1561,7 +1564,7 @@ Return whether the GUI reviewer is active.
 
 ### `storeMediaFile`
 
-Store media from exactly one of `data` (base64), `path` (local file), or `url` (HTTP/HTTPS). The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
+Store media from the first nonempty source among `data` (base64), `path` (local file), and `url` (HTTP/HTTPS), in that order. Base64 whitespace is accepted. The result is the actual filename, which may be normalized or renamed. `deleteExisting=true` explicitly replaces a collision after acquisition succeeds; false uses native renaming. `skipHash` is the incoming bytes’ MD5 digest: a match returns null and promises no stored file.
 
 **Parameters:** `storeMediaFile(filename, data=None, path=None, url=None, skipHash=None, deleteExisting=True)`
 
@@ -1874,7 +1877,7 @@ Run the nested requests in order, waiting for each final outcome. Results preser
 
 **Completion:** all nested operations final.
 
-**Behavior:** No atomicity. Legacy profile switching is allowed with a barrier; new api.execute prohibits it. Shutdown ends execution as described below.
+**Behavior:** No atomicity. Unknown child actions and bad arguments return errors in their own result slots; subsequent requests still run. Legacy profile switching is allowed with a barrier; new api.execute prohibits it. Shutdown ends execution as described below.
 
 **v1 equivalent:** [api.execute](API_V1.md#apiexecute).
 
@@ -2712,7 +2715,7 @@ Create a note and return its numeric ID. Invalid content or missing references r
 
 ### `addNotes`
 
-Create all supplied notes in one native atomic collection batch. Any failed preflight rejects the batch; successful creation returns numeric IDs in input order. Third-party hook I/O and media are outside the collection transaction.
+Create all supplied notes in one native atomic collection batch. Any failed preflight rejects the batch with the historical stringified list of errors in input order, including duplicates within the batch; successful creation returns numeric IDs in input order. Third-party hook I/O and media are outside the collection transaction.
 
 **Parameters:** `addNotes(notes)`
 
@@ -3459,7 +3462,7 @@ Read review history for the named deck after exclusive `startID` (Unix milliseco
 
 **Completion:** completed.
 
-**Behavior:** missing deck errors without creation; deterministic ID order; factor meaning preserved.
+**Behavior:** A missing deck is created and returns an empty review list; deterministic ID order; factor meaning preserved.
 
 **v1 equivalent:** [reviews.list](API_V1.md#reviewslist).
 
@@ -3504,7 +3507,7 @@ Return review history grouped by card ID. Entries contain `id`, `usn`, `ease`, `
 
 ### `getLatestReviewID`
 
-Return the latest matching review ID in Unix milliseconds, or `0` when the deck has no history. A missing deck is an error.
+Return the latest matching review ID in Unix milliseconds, or `0` when the deck has no history. A missing deck is created and returns `0`.
 
 **Parameters:** `getLatestReviewID(deck)`
 
