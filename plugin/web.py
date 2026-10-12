@@ -155,6 +155,9 @@ class WebServer:
                 headers.append(['Access-Control-Allow-Private-Network', 'true'])
             return self.buildResponse(headers, body)
         if req.method == b'OPTIONS':
+            # Preflight has no JSON body, so it cannot identify permission discovery.
+            # Let browsers send the POST; origin admission below still protects actions.
+            origin = req.headers.get(b'origin', b'').decode() or origin
             return response(None, empty=True)
         rpc = req.path == b'/api/v1'
         if req.path not in (b'/', b'/api/v1'):
@@ -211,7 +214,8 @@ class WebServer:
 
     def buildHeaders(self, corsOrigin, body):
         return [['HTTP/1.1 200 OK', None], ['Content-Type', 'application/json'],
-                ['Access-Control-Allow-Origin', corsOrigin], ['Access-Control-Allow-Headers', '*'],
+                ['Access-Control-Allow-Origin', corsOrigin], ['Vary', 'Origin'],
+                ['Access-Control-Allow-Headers', 'Content-Type, Authorization, *'],
                 ['Access-Control-Allow-Methods', 'POST, OPTIONS'], ['Connection', 'close'],
                 ['Content-Length', str(len(body))]]
 

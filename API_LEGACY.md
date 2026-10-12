@@ -1687,6 +1687,9 @@ Deletes the specified file inside the media folder.
 ### `requestPermission`
 
 Request permission for the actual HTTP origin. The transport supplies `origin` and `allowed`; omit them from the request. Approval may display an Anki dialog. The reply never includes the API key.
+Browser clients may use `Content-Type: application/json` before their origin is
+approved. OPTIONS preflight requires no API key and does not grant access to
+other actions; each POST still checks origin permission and authentication.
 
 **Parameters:** `requestPermission(origin, allowed)`
 
@@ -1706,6 +1709,12 @@ Request permission for the actual HTTP origin. The transport supplies `origin` a
   "version": 6,
   "params": {}
 }
+```
+
+**Example result after denial**
+
+```json
+{"result":{"permission":"denied"},"error":null}
 ```
 
 ### `version`

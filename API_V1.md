@@ -126,7 +126,9 @@ actual HTTP origin, is exempt from the API key check, and never returns the key.
 JSON-RPC results and errors use HTTP 200, including parse errors. Transport
 rejections have empty bodies: 401 for an invalid key, 403 for a rejected origin,
 405 for a non-POST request, and 413 for an oversized body. Check the HTTP status
-before parsing JSON. Allowed OPTIONS requests support browser preflight.
+before parsing JSON. OPTIONS replies support browser preflight for JSON and
+Authorization headers, including from origins awaiting permission. Preflight
+does not grant access: each POST still checks origin permission and authentication.
 
 ```json
 {"jsonrpc":"2.0","id":1,"error":{"code":1001,"message":"Note not found.","data":{"type":"notFound"}}}
@@ -408,6 +410,9 @@ Ask for access using the transport-supplied origin.
 **Scope:** application. **Completion:** completed. **Undo:** `none`.
 
 Never accept origin or allowed from parameters. Authentication exemption matches legacy permission discovery.
+Browser clients may send this request with `Content-Type: application/json`
+before their origin is approved; preflight requires no API key. A permission
+decision is required before other methods become available to that origin.
 
 **Parameters**
 
@@ -428,6 +433,12 @@ No parameters.
   "method": "access.requestPermission",
   "params": {}
 }
+```
+
+**Example result after denial**
+
+```json
+{"jsonrpc":"2.0","id":1,"result":{"permission":"denied","requireApiKey":false}}
 ```
 
 ## Profiles

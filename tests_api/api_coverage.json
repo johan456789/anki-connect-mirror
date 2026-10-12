@@ -2,6 +2,24 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_cors.py",
+      "case": "test_new_origin_preflights_and_awaits_permission",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": ["access.requestPermission"],
+      "legacy": ["requestPermission"],
+      "notes": "HTTP preflight permits JSON permission discovery from new origins without a key. Mocked deferred decisions check grant/deny reply headers and transport-supplied origin context; native permission dialogs are not executed."
+    },
+    {
+      "source": "tests_api/test_cors.py",
+      "case": "test_preflight_does_not_bypass_origin_or_api_key",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": ["collection.get"],
+      "legacy": ["version"],
+      "notes": "Preflight does not authorize subsequent actions: rejected origins never dispatch on either endpoint, and v1 requires the configured Bearer key. Allowed dispatch uses a fake callback; native collection methods are not executed."
+    },
+    {
       "source": "tests_api/test_yomitan.py",
       "case": "test_yomitan_mining_lookup_overwrite_media_and_suspension",
       "layer": "controlled-admission",
