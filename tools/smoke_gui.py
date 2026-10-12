@@ -661,7 +661,10 @@ try:
             assert all(aqt.mw.col.decks.name(card.did) == 'Obsidian::Moved' for card in actual.cards())
         assert aqt.mw.col.find_notes('nid:' + str(ids[-1])) == []
         assert aqt.mw.col.note_count() == 45  # 44 synced notes plus the scenario's setup note.
-        assert aqt.mw._background_op_count == 0
+        # Native change notifications can queue deck-browser refresh queries.
+        # The HTTP reply completes the API work, but those queries may still run.
+        wait_until(lambda: aqt.mw._background_op_count == 0,
+                   description='Obsidian native refresh completion')
         owner.server.close()
         owner.timer.stop()
         util.setting = setting
@@ -715,7 +718,9 @@ try:
         assert fallback['error'] is None and type(fallback['result']) is int, fallback
         actual = aqt.mw.col.get_note(fallback['result'])
         assert actual['word'] == 'Conditional fallback' and len(actual.card_ids()) == 1
-        assert aqt.mw._background_op_count == 0
+        # Allow native refresh queries triggered by the final write to complete.
+        wait_until(lambda: aqt.mw._background_op_count == 0,
+                   description='Mining clients native refresh completion')
         owner.server.close()
         owner.timer.stop()
         util.setting = setting
