@@ -2,6 +2,53 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_yomitan.py",
+      "case": "test_yomitan_mining_lookup_overwrite_media_and_suspension",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "version", "deckNames", "modelNames", "modelFieldNames", "apiReflect",
+        "storeMediaFile", "addNote", "canAddNotesWithErrorDetail", "canAddNotes",
+        "findNotes", "multi", "notesInfo", "findCards", "cardsInfo", "suspend",
+        "updateNoteFields", "addNotes"
+      ],
+      "notes": "Yomitan version-2 requests through HTTP reply formatting and controlled Qt admission, with and without an API key. Native collection/media effects, duplicate lookup, versionless multi entries, numeric IDs, missing-record sentinels, suspension, JSON-null overwrite replies, and 100-note deck-generation batches are asserted."
+    },
+    {
+      "source": "tests_api/test_yomitan.py",
+      "case": "test_yomitan_mining_lookup_overwrite_media_and_suspension",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": ["sync"],
+      "notes": "Version-2 sync without credentials returns the historical auth error through HTTP formatting. No network sync account or completion is exercised."
+    },
+    {
+      "source": "tests_api/test_yomitan.py",
+      "case": "test_yomitan_root_deck_and_all_models_duplicate_options",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": ["canAddNotesWithErrorDetail"],
+      "notes": "Native notes in sibling decks and another note type verify Yomitan root-deck/checkChildren and collection/checkAllModels options through version-2 HTTP formatting and controlled admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_yomitan_deck_scope_defaults_and_mining",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail",
+        "canAddNotes",
+        "canAddNotesWithErrorDetail"
+      ],
+      "notes": "Real disposable collection; Yomitan-shaped deck-scoped probes and mining requests accept omitted/null duplicate deck names, respect explicit scopes, preserve inputs, and persist notes/cards in the destination deck. Native v1 null names remain invalid. Bypasses HTTP and admission."
+    },
+    {
       "source": "tests_api/test_compatibility.py",
       "case": "test_media_filename_native_round_trip",
       "layer": "controlled-admission",

@@ -90,7 +90,8 @@ Failures return `{"result":null,"error":"message"}`. Error messages are strings;
 applications should not depend on exact wording.
 
 Omitting `version` selects version 4. Successful calls at version 4 or below
-return a bare result, without the envelope. Exceptions at every version retain
+return a bare JSON result, without the envelope, including the literal `null`
+for actions with no result. Exceptions at every version retain
 the `result`/`error` envelope. Prefer an explicit version 6.
 
 ## Compatibility and completion
@@ -153,8 +154,9 @@ show every accepted argument and its default. Media data is base64 encoded.
 Creation uses `deckName`, `modelName`, `fields` (HTML strings), and optional `tags`.
 `options.allowDuplicate` defaults to false. `options.duplicateScope` accepts
 `collection` (default) or `deck`; other values fail. For deck scope,
-`duplicateScopeOptions.deckName` chooses the duplicate-check deck, otherwise the
-creation deck is used. `checkChildren` and `checkAllModels` default to false.
+`duplicateScopeOptions.deckName` chooses the duplicate-check deck; when omitted
+or null, the creation deck is used. `checkChildren` and `checkAllModels` default
+to false.
 
 The optional `audio`, `video`, and `picture` properties accept one media object or
 an array. Each object needs `filename` and exactly one of `data`, `path`, or `url`.

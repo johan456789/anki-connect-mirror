@@ -147,20 +147,20 @@ class WebServer:
 
     def handlerWrapper(self, req):
         allowed, origin = self.allowOrigin(req)
-        def response(value, status='200 OK'):
-            body = b'' if value is None else json.dumps(value, allow_nan=False).encode('utf-8')
+        def response(value, status='200 OK', empty=False):
+            body = b'' if empty else json.dumps(value, allow_nan=False).encode('utf-8')
             headers = self.buildHeaders(origin, body)
             headers[0][0] = 'HTTP/1.1 ' + status
             if req.method == b'OPTIONS' and req.headers.get(b'access-control-request-private-network') == b'true':
                 headers.append(['Access-Control-Allow-Private-Network', 'true'])
             return self.buildResponse(headers, body)
         if req.method == b'OPTIONS':
-            return response(None)
+            return response(None, empty=True)
         rpc = req.path == b'/api/v1'
         if req.path not in (b'/', b'/api/v1'):
-            return response(None, '404 Not Found')
+            return response(None, '404 Not Found', empty=True)
         if rpc and req.method != b'POST':
-            return response(None, '405 Method Not Allowed')
+            return response(None, '405 Method Not Allowed', empty=True)
         try:
             def reject_constant(value):
                 raise ValueError('Non-finite JSON number')
@@ -169,7 +169,7 @@ class WebServer:
                 jsonschema.validate(params, request_schema)
         except (ValueError, UnicodeError, jsonschema.ValidationError) as error:
             if not allowed:
-                return response(None, '403 Forbidden')
+                return response(None, '403 Forbidden', empty=True)
             if rpc:
                 return response(Dispatcher.reply(None, error=ApiError('parseError', 'Invalid JSON.')))
             if not req.body:
@@ -177,17 +177,18 @@ class WebServer:
             return response(format_exception_reply(util.setting('apiVersion'), error))
         permission = isinstance(params, dict) and params.get('method' if rpc else 'action') == ('access.requestPermission' if rpc else 'requestPermission')
         if not allowed and not permission:
-            return response(None, '403 Forbidden')
+            return response(None, '403 Forbidden', empty=True)
         if permission:
             origin = req.headers.get(b'origin', b'').decode()
         if rpc:
             key = util.setting('apiKey')
             if key is not None and not permission and req.headers.get(b'authorization') != ('Bearer ' + key).encode():
-                return response(None, '401 Unauthorized')
+                return response(None, '401 Unauthorized', empty=True)
             if self.rpc_handler is None:
-                return response(None, '404 Not Found')
+                return response(None, '404 Not Found', empty=True)
             pending = self.rpc_handler(params, {'origin': req.headers.get(b'origin', b'').decode(), 'allowed': allowed})
-            return pending.map(lambda value: response(value, '204 No Content' if value is None else '200 OK'))
+            return pending.map(lambda value: response(value, '204 No Content' if value is None else '200 OK',
+                                                      empty=value is None))
         if permission:
             params.setdefault('params', {}).update(allowed=allowed, origin=origin)
         value = self.handler(params)

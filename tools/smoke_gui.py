@@ -103,12 +103,21 @@ def call(method, **params):
                     or time.monotonic() >= deadline):
                 raise
             app.processEvents()
-def old(action, **params):
+def old(action, *, http_v2=False, **params):
     deadline = time.monotonic() + 30
     while True:
         wait_until(lambda: aqt.mw._background_op_count == 0)
         previous = set(owner.runtime.operations.records)
-        reply = result(owner.handler_async({'action': action, 'version': 6, 'params': params}))
+        request = {'action': action, 'version': 2 if http_v2 else 6, 'params': params}
+        if http_v2:
+            import json
+            from plugin.web import WebRequest
+            raw = result(owner.server.handlerWrapper(WebRequest(b'POST', {}, json.dumps(request).encode())))
+            # Yomitan parses every version-2 response as JSON, including null.
+            value = json.loads(raw.split(b'\r\n\r\n', 1)[1])
+            reply = value if isinstance(value, dict) and 'error' in value else {'result': value, 'error': None}
+        else:
+            reply = result(owner.handler_async(request))
         if (reply['error'] == 'A collection operation is active.'
                 and time.monotonic() < deadline):
             app.processEvents()
@@ -231,6 +240,8 @@ try:
         print('PASS browser numeric sorting both directions', flush=True)
         legacy_reply = result(owner.handler_async({'action': 'guiBrowse', 'version': 6, 'params': {'query': ''}}))
         assert legacy_reply == {'result': sorted(aqt.mw.col.find_cards('')), 'error': None}, legacy_reply
+        assert set(old('guiBrowse', http_v2=True, query='nid:' + note['noteId'])) == {
+            int(id) for id in siblings}
         print('PASS legacy browser completion', flush=True)
         result(owner.runtime.gui.javascript(owner.runtime.gui.browser().editor, 'await saveNow(); return true;'))
         aqt.dialogs.closeAll(onsuccess=lambda: None)
@@ -251,6 +262,7 @@ try:
         wait_until(lambda: bool(saved))
         assert aqt.mw.col.get_note(int(note['noteId']))['Front'] == 'Edited GUI question'
         assert old('guiEditNote', note=int(note['noteId'])) is None
+        assert old('guiEditNote', http_v2=True, note=int(note['noteId'])) is None
         assert owner.runtime.gui.editors
         print('PASS custom editor save', flush=True)
         aqt.dialogs.closeAll(onsuccess=lambda: None)

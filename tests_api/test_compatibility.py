@@ -28,6 +28,47 @@ def legacy_note(front):
     return {'modelName': 'Basic', 'deckName': 'Default', 'fields': {'Front': front, 'Back': 'answer'}}
 
 
+@pytest.mark.parametrize('scope_options', [{}, {'deckName': None}, {'deckName': 'Default'},
+                                          {'deckName': 'Other'}])
+def test_legacy_yomitan_deck_scope_defaults_and_mining(native, scope_options):
+    import copy
+    owner, service = native
+    old(native, 'createDeck', deck='Other')
+    old(native, 'addNote', note=legacy_note('existing'))
+    source = {**legacy_note('existing'), 'options': {
+        'allowDuplicate': False, 'duplicateScope': 'deck', 'duplicateScopeOptions': {
+            'checkChildren': False, 'checkAllModels': False, **scope_options}}}
+    original = copy.deepcopy(source)
+    # Yomitan's duplicate probe strips all but the first field.
+    probe = copy.deepcopy(source)
+    probe['fields'].pop('Back')
+    original_probe = copy.deepcopy(probe)
+    expected = ({'canAdd': True} if scope_options.get('deckName') == 'Other' else
+                {'canAdd': False, 'error': 'cannot create note because it is a duplicate'})
+    assert old(native, 'canAddNoteWithErrorDetail', note=probe) == expected
+    assert old(native, 'canAddNotesWithErrorDetail', notes=[probe]) == [expected]
+    assert old(native, 'canAddNotes', notes=[probe]) == [expected['canAdd']]
+    assert probe == original_probe
+    assert source == original
+    # Yomitan allows duplicates on the actual mining request. The translated
+    # options still need to pass schema validation before native creation.
+    source['options']['allowDuplicate'] = True
+    original = copy.deepcopy(source)
+    id = old(native, 'addNote', note=source)
+    ids = old(native, 'addNotes', notes=[source])
+    assert source == original
+    for note_id in [id, *ids]:
+        note = service.col.get_note(note_id)
+        assert note['Front'] == 'existing' and note['Back'] == 'answer'
+        assert service.col.decks.name(note.cards()[0].did) == 'Default'
+    assert service.col.note_count() == 3
+    # Null names remain invalid in v1; only the legacy shorthand is normalized.
+    with pytest.raises(ApiError) as caught:
+        call(service, 'notes.validate', note=note_input('v1', duplicates={
+            'scope': 'deck', 'deck': {'name': None}}))
+    assert caught.value.kind == 'invalidParams'
+
+
 @pytest.mark.parametrize('failure,message', [
     ('duplicate', 'cannot create note because it is a duplicate'),
     ('empty', 'cannot create note because it is empty'),

@@ -136,7 +136,8 @@ class Legacy:
                       'includeChildren': scoped.get('checkChildren', False),
                       'acrossNoteTypes': scoped.get('checkAllModels', False)}
         if scope == 'deck':
-            duplicates['deck'] = self.ref(scoped.get('deckName', source['deckName']))
+            deck_name = scoped.get('deckName')
+            duplicates['deck'] = self.ref(source['deckName'] if deck_name is None else deck_name)
         data = {'noteType': self.ref(source['modelName']), 'deck': self.ref(source['deckName']),
                 'fields': fields, 'tags': list(source.get('tags', [])), 'duplicates': duplicates}
         if pure:
