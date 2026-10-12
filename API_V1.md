@@ -3395,6 +3395,9 @@ Open the browser and finish after the requested search/sort completes.
 **Scope:** collection. **Completion:** operation. **Undo:** `none`.
 
 Omitted query preserves existing browser search. Explicit direction is applied regardless of previous/default column order.
+A new browser starts with the requested query before its editor finishes loading.
+An existing browser saves editor changes before switching search. Operation
+completion still waits for browser readiness and applies any requested sort.
 
 **Parameters**
 

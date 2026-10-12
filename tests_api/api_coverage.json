@@ -2,6 +2,15 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tools/smoke_gui.py",
+      "case": "browser-startup",
+      "layer": "real-gui",
+      "outcome": "success",
+      "v1": ["browser.open"],
+      "legacy": ["guiBrowse"],
+      "notes": "Real Qt browsers and native collections for both editor variants, v1 operations, and legacy version-2/version-6 HTTP requests. A held readiness callback verifies the target search is the sole initial search and the correct rows appear before completion. Checks unchanged search for omitted query and persisted editor changes when reusing the browser."
+    },
+    {
       "source": "tests_api/test_yomitan.py",
       "case": "test_legacy_media_targets_omitted_fields",
       "layer": "controlled-admission",

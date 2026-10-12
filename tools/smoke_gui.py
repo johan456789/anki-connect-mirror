@@ -2,7 +2,7 @@
 """Real-GUI smoke checks, run by tools/test.sh/tools/test.ps1 by default; uses disposable Anki profiles.
 
 Run with the pinned environment and a working display:
-    python tools/smoke_gui.py [all|editors|browser|custom|reviewer|imports|profiles|colpkg|obsidian|mining-clients|exit|legacy-exit]
+    python tools/smoke_gui.py [all|editors|browser|browser-startup|custom|reviewer|imports|profiles|colpkg|obsidian|mining-clients|exit|legacy-exit]
 
 No sync credentials are used. Profiles/files remain in the OS temp directory for diagnostics.
 Processes exit after checks to isolate native Qt/WebEngine teardown; application
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Each scenario runs in a fresh process/profile to isolate Qt WebEngine teardown.
 scenario = sys.argv[1] if len(sys.argv) > 1 else 'all'
-scenarios = ['editors', 'browser', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'obsidian', 'mining-clients', 'exit', 'legacy-exit']
+scenarios = ['editors', 'browser', 'browser-startup', 'custom', 'reviewer', 'imports', 'profiles', 'colpkg', 'obsidian', 'mining-clients', 'exit', 'legacy-exit']
 if scenario == 'all':
     import subprocess
     failures = []
@@ -255,6 +255,99 @@ try:
         result(owner.runtime.gui.javascript(owner.runtime.gui.browser().editor, 'await saveNow(); return true;'))
         aqt.dialogs.closeAll(onsuccess=lambda: None)
         wait_until(aqt.dialogs.allClosed)
+    if scenario == 'browser-startup':
+        import json
+        from anki.collection import ExperimentFlag
+        from aqt.browser import Browser
+        from plugin.web import WebRequest
+        other = call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
+                     fields={'Front': 'Unrelated browser startup note'})
+        query = 'nid:' + note['noteId']
+        expected_cards = {int(id) for id in note['cardIds']}
+        native_javascript = owner.runtime.gui.javascript
+        native_search = Browser.search_for
+        searches, gates = [], []
+        def record_search(browser, search, *args, **kwargs):
+            searches.append(search)
+            return native_search(browser, search, *args, **kwargs)
+        def pause_readiness(editor, code, ready=None):
+            if ready == 'typeof saveNow === "function"':
+                gate = Deferred()
+                gates.append(gate)
+                return gate
+            return native_javascript(editor, code, ready)
+        def table_cards(browser):
+            model = browser.table._model
+            return set(model.get_items([model.index(row, 0) for row in range(model.rowCount())]))
+        try:
+            Browser.search_for = record_search
+            for svelte in (False, True):
+                aqt.mw.col._experiments[str(ExperimentFlag.SVELTE_EDITOR)] = svelte
+                for protocol in ('v1', 'legacy-v2', 'legacy-v6'):
+                    assert owner.runtime.gui.browser() is None
+                    wait_until(lambda: aqt.mw._background_op_count == 0)
+                    searches.clear()
+                    gates.clear()
+                    owner.runtime.gui.javascript = pause_readiness
+                    if protocol == 'v1':
+                        reply = owner.runtime.dispatcher.request({'jsonrpc': '2.0', 'id': 1,
+                            'method': 'browser.open', 'params': {'query': query}})
+                        value = result(reply)
+                        assert 'result' in value, value
+                        handle = value['result']['operationId']
+                        pending = owner.runtime.operations.completions[handle]
+                    else:
+                        reply = owner.server.handlerWrapper(WebRequest(b'POST', {}, json.dumps({
+                            'action': 'guiBrowse', 'version': 2 if protocol == 'legacy-v2' else 6,
+                            'params': {'query': query}}).encode()))
+                        pending = reply
+                    wait_until(lambda: bool(gates))
+                    browser = owner.runtime.gui.browser()
+                    # Search/table effects must precede editor readiness and API completion.
+                    assert browser.current_search() == query
+                    wait_until(lambda: table_cards(browser) == expected_cards)
+                    assert searches == [query], searches
+                    assert not pending.done
+                    owner.runtime.gui.javascript = native_javascript
+                    result(native_javascript(browser.editor, 'return true;', ready='typeof saveNow === "function"'))
+                    gates[0].resolve(True)
+                    value = result(pending)
+                    if protocol == 'v1':
+                        assert value['selectedNoteIds'] == [note['noteId']], value
+                    else:
+                        value = json.loads(value.split(b'\r\n\r\n', 1)[1])
+                        cards = value if protocol == 'legacy-v2' else value['result']
+                        assert set(cards) == expected_cards, value
+                    assert searches == [query], searches
+                    # Omitted query preserves the existing search on an open browser.
+                    assert old('guiBrowse') == []
+                    assert browser.current_search() == query
+                    # Stage an editor change, then search elsewhere through the same API.
+                    edited = 'Browser edit ' + protocol + ' ' + str(svelte)
+                    loaded = ('(() => { try { const info = getNoteInfo(); return String(info.id) === '
+                              + json.dumps(note['noteId']) + ' && info.fields.length === 2; } catch { return false; } })()'
+                              if svelte else None)
+                    result(native_javascript(browser.editor,
+                        'setFields(["Front", "Back"], ' + json.dumps([edited, 'GUI answer']) + '); return true;',
+                        ready=loaded))
+                    if protocol == 'v1':
+                        call('browser.open', query='nid:' + other['noteId'])
+                    else:
+                        old('guiBrowse', http_v2=protocol == 'legacy-v2', query='nid:' + other['noteId'])
+                    wait_until(lambda: table_cards(browser) == {int(id) for id in other['cardIds']})
+                    wait_until(lambda: aqt.mw._background_op_count == 0)
+                    assert aqt.mw.col.get_note(int(note['noteId']))['Front'] == edited
+                    if svelte:
+                        result(native_javascript(browser.editor, 'return true;', ready=loaded.replace(
+                            json.dumps(note['noteId']), json.dumps(other['noteId']))))
+                    result(native_javascript(browser.editor, 'await saveNow(); return true;'))
+                    aqt.dialogs.closeAll(onsuccess=lambda: None)
+                    wait_until(aqt.dialogs.allClosed)
+                    print('PASS initial browser query before readiness and existing-editor save',
+                          protocol, 'svelte=' + str(svelte), flush=True)
+        finally:
+            Browser.search_for = native_search
+            owner.runtime.gui.javascript = native_javascript
     if scenario == 'custom':
         editor = call('editors.openNote', noteId=note['noteId'])
         assert editor['noteId'] == note['noteId'], editor

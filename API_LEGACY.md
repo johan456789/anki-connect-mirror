@@ -1048,6 +1048,9 @@ Open the browser and optionally search with Anki syntax. `reorderCards` is an ob
 **Completion:** browser ready.
 
 **Behavior:** preserve explicit sort direction regardless of selected/default column.
+A new browser starts with the supplied query before its editor finishes loading.
+An existing browser saves editor changes before switching search. The response
+still waits for browser readiness and returns card IDs for the query.
 
 **v1 equivalent:** [browser.open](API_V1.md#browseropen), [cards.search](API_V1.md#cardssearch).
 
