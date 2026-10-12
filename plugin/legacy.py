@@ -115,7 +115,8 @@ class Legacy:
         source = copy.deepcopy(source)
         model = self.model(source['modelName'])
         self.resolve(self.ref(source['deckName']), 'deck')
-        fields = {}
+        # Native notes have every model field, including omitted media targets.
+        fields = {field['name']: '' for field in model['flds']}
         for key, value in source['fields'].items():
             matches = [field['name'] for field in model['flds'] if field['name'].lower() == key.lower()]
             if len(matches) > 1:

@@ -28,6 +28,46 @@ def exchange(owner, drain, request):
 
 
 @pytest.mark.parametrize('action', ['addNote', 'addNotes'])
+@pytest.mark.parametrize('kind', ['audio', 'video', 'picture'])
+@pytest.mark.parametrize('target', ['Front', 'Back'])
+@pytest.mark.parametrize('version', [2, 6])
+def test_legacy_media_targets_omitted_fields(admitted, action, kind, target, version):
+    owner, service, drain, _, notifications = admitted
+    other = 'Back' if target == 'Front' else 'Front'
+    filename = 'omitted.' + {'audio': 'mp3', 'video': 'mp4', 'picture': 'png'}[kind]
+    payload = b'legacy attachment'
+    source = {'modelName': 'Basic', 'deckName': 'Default', 'fields': {other: 'existing'},
+              kind: [{'filename': filename, 'data': base64.b64encode(payload).decode(),
+                      'fields': [target, 'Unknown']}]}
+
+    def request(name, **params):
+        value = exchange(owner, drain, {'action': name, 'version': version, 'params': params})
+        if version > 4:
+            assert value['error'] is None, value
+            return value['result']
+        return value
+
+    assert request('canAddNoteWithErrorDetail', note=source) == {'canAdd': True}
+    assert service.col.note_count() == 0
+    assert not (Path(service.col.media.dir()) / filename).exists()
+    value = request(action, **({'note': source} if action == 'addNote' else {'notes': [source]}))
+    id = value[0] if action == 'addNotes' else value
+    assert type(id) is int
+    expected = '<img src="' + filename + '">' if kind == 'picture' else '[sound:' + filename + ']'
+    note = service.col.get_note(id)
+    assert note[target] == expected
+    assert note[other] == 'existing'
+    info = request('notesInfo', notes=[id])[0]
+    assert set(info['fields']) == {'Front', 'Back'}
+    assert info['fields'][target]['value'] == expected
+    assert info['fields'][other]['value'] == 'existing'
+    assert (Path(service.col.media.dir()) / filename).read_bytes() == payload
+    assert source['fields'] == {other: 'existing'}
+    assert service.col.note_count() == 1
+    assert notifications and owner.window()._background_op_count == 0
+
+
+@pytest.mark.parametrize('action', ['addNote', 'addNotes'])
 def test_yomitan_conditional_questions_preserve_native_fallback_cards(admitted, action):
     """addNote/addNotes/canAddNoteWithErrorDetail/notesInfo use the old native fallback.
 

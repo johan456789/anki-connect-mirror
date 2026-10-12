@@ -2699,6 +2699,9 @@ Create a note and return its numeric ID. Invalid content or missing references r
 **Completion:** completed.
 
 **Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
+Omitted note-type fields start empty. Audio, video, and picture attachments append
+to their named note-type fields even when those fields are absent from `note.fields`;
+unknown attachment field names are ignored.
 
 **v1 equivalent:** [notes.create](API_V1.md#notescreate), [media.store](API_V1.md#mediastore).
 
@@ -2713,15 +2716,24 @@ Create a note and return its numeric ID. Invalid content or missing references r
       "deckName": "Default",
       "modelName": "Basic",
       "fields": {
-        "Front": "cat",
-        "Back": "猫"
+        "Front": "cat"
       },
+      "audio": [{"filename": "cat.mp3", "data": "eHl6", "fields": ["Back"]}],
       "tags": [
         "vocabulary"
       ]
     }
   }
 }
+```
+
+The stored note's `Back` contains `[sound:cat.mp3]`. The example base64 data is
+a placeholder; supply actual audio bytes when using this request.
+
+**Example result**
+
+```json
+{"result": 1700000000000, "error": null}
 ```
 
 ### `addNotes`
@@ -2735,6 +2747,7 @@ Create all supplied notes in one native atomic collection batch. Any failed pref
 **Completion:** completed.
 
 **Behavior:** Uses native validation. Eligibility checks do not download media or change the collection. Note creation uses a native transaction; media recovery is separate.
+Each note uses the same omitted-field and attachment behavior as `addNote`.
 
 **v1 equivalent:** [notes.createMany](API_V1.md#notescreatemany), [media.store](API_V1.md#mediastore).
 

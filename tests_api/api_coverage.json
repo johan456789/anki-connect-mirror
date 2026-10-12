@@ -2,6 +2,15 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_yomitan.py",
+      "case": "test_legacy_media_targets_omitted_fields",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": ["addNote", "addNotes", "canAddNoteWithErrorDetail", "notesInfo"],
+      "notes": "Version-2 and version-6 HTTP requests with controlled Qt admission and real collections verify audio, video and pictures targeting omitted first or second note-type fields. Asserts persisted field markup and media bytes, existing field preservation, ignored unknown targets, source immutability, native notifications, and eligibility checks without media writes."
+    },
+    {
       "source": "tests_api/test_obsidian.py",
       "case": "test_obsidian_single_file_bulk_add",
       "layer": "controlled-admission",
