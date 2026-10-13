@@ -539,13 +539,20 @@ Return each card’s modification time in Unix seconds. Missing cards produce em
 Returns a list of objects containing for each card ID the card fields, front and back sides including CSS, note
 type, the note that the card belongs to, and deck name, last modification timestamp as well as ease and interval.
 
-**Parameters:** `cardsInfo(cards)`
+**Parameters:** `cardsInfo(cards, fields=None)`
 
 **Returns:** Legacy card records including cardId/fields/fieldOrder/question/answer/modelName/ord/deckName/css/factor/interval/note/type/queue/due/reps/lapses/left/mod/nextReviews/flags; missing card is {}.
 
 **Completion:** completed.
 
 **Behavior:** nextReviews remains labelled/default scheduler prediction, not retained reviewer custom states.
+The optional `fields` list selects top-level card record properties (for example,
+`["cardId", "fields", "queue", "type"]`). Omitting it or passing `null` returns
+the complete record; `[]` returns an empty object for each card. Unknown property
+names are ignored. Missing cards remain `{}`, and input order and duplicates are
+preserved. Filtering skips rendering and scheduler prediction when their results
+are not requested; selecting `"fields"` returns all note fields with their values
+and order.
 
 **v1 equivalent:** [cards.getMany](API_V1.md#cardsgetmany), [cards.render](API_V1.md#cardsrender), [notes.get](API_V1.md#notesget), [noteTypes.get](API_V1.md#notetypesget), [scheduling.predict](API_V1.md#schedulingpredict).
 
@@ -562,6 +569,20 @@ type, the note that the card belongs to, and deck name, last modification timest
     ]
   }
 }
+```
+
+**Example filtered request/result**
+
+```json
+{
+  "action": "cardsInfo",
+  "version": 6,
+  "params": {"cards": [1498938915662], "fields": ["cardId", "queue"]}
+}
+```
+
+```json
+{"result": [{"cardId": 1498938915662, "queue": 2}], "error": null}
 ```
 
 ### `forgetCards`

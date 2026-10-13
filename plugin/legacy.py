@@ -299,23 +299,43 @@ class Legacy:
                 raise ApiError('ioError', 'Media restoration failed.', {'failures': failures, 'cause': str(error)}) from error
             raise
 
-    def record(self, kind, id):
+    def record(self, kind, id, fields=None):
+        if kind == 'cards':
+            return self.card_info(id, fields)
         value = self.s(kind + '.get', id=str(id))
-        model = self.model(id=value['noteType']['id']) if kind == 'notes' else self.model(id=self.service.card(str(id)).note().mid)
-        if kind == 'notes':
-            return {'noteId': int(id), 'profile': self.runtime.profile_name, 'tags': value['tags'],
-                    'fields': {field['name']: {'value': value['fields'][field['name']], 'order': index} for index, field in enumerate(model['flds'])},
-                    'modelName': model['name'], 'mod': int(datetime.fromisoformat(value['modifiedAt'].replace('Z', '+00:00')).timestamp()),
-                    'cards': [int(id) for id in value['cardIds']]}
+        model = self.model(id=value['noteType']['id'])
+        return {'noteId': int(id), 'profile': self.runtime.profile_name, 'tags': value['tags'],
+                'fields': {field['name']: {'value': value['fields'][field['name']], 'order': index} for index, field in enumerate(model['flds'])},
+                'modelName': model['name'], 'mod': int(datetime.fromisoformat(value['modifiedAt'].replace('Z', '+00:00')).timestamp()),
+                'cards': [int(id) for id in value['cardIds']]}
+
+    def card_info(self, id, fields=None):
+        if self.service is None:
+            self.service = self.runtime.service()
         card = self.service.card(str(id))
-        rendered = self.s('cards.render', id=str(id))
-        prediction = self.s('scheduling.predict', cardId=str(id))
-        return {'cardId': card.id, 'fields': {field['name']: {'value': card.note().fields[index], 'order': index} for index, field in enumerate(model['flds'])},
-                'fieldOrder': card.ord, 'question': rendered['questionHtml'], 'answer': rendered['answerHtml'],
-                'modelName': model['name'], 'ord': card.ord, 'deckName': value['deck']['name'], 'css': model['css'],
+        result = {'cardId': card.id, 'fieldOrder': card.ord, 'ord': card.ord,
                 'factor': card.factor, 'interval': card.ivl, 'note': card.nid, 'type': card.type, 'queue': card.queue,
                 'due': card.due, 'reps': card.reps, 'lapses': card.lapses, 'left': card.left, 'mod': card.mod,
-                'nextReviews': [item['label'] for item in prediction['answers']], 'flags': card.flags}
+                'flags': card.flags}
+        requested = None if fields is None else set(fields)
+        if requested is None or requested & {'fields', 'modelName', 'css'}:
+            note = card.note()
+            model = self.model(id=note.mid)
+            if requested is None or 'fields' in requested:
+                result['fields'] = {field['name']: {'value': note.fields[index], 'order': index} for index, field in enumerate(model['flds'])}
+            if requested is None or 'modelName' in requested:
+                result['modelName'] = model['name']
+            if requested is None or 'css' in requested:
+                result['css'] = model['css']
+        if requested is None or 'deckName' in requested:
+            result['deckName'] = self.resolve({'id': str(card.did)}, 'deck')['name']
+        if requested is None or requested & {'question', 'answer'}:
+            rendered = self.s('cards.render', id=str(id))
+            result.update(question=rendered['questionHtml'], answer=rendered['answerHtml'])
+        if requested is None or 'nextReviews' in requested:
+            prediction = self.s('scheduling.predict', cardId=str(id))
+            result['nextReviews'] = [item['label'] for item in prediction['answers']]
+        return result if requested is None else {key: value for key, value in result.items() if key in requested}
 
     def gui_call(self, name, p):
         runtime = self.runtime
@@ -725,6 +745,9 @@ class Legacy:
         if name in ('findNotes', 'findCards'):
             return [] if p['query'] is None else [int(id) for id in self.all_pages('notes.search' if name == 'findNotes' else 'cards.search', query=p['query'])]
         if name in ('notesInfo', 'cardsInfo', 'notesModTime', 'cardsModTime'):
+            fields = p.get('fields') if name == 'cardsInfo' else None
+            if fields is not None and (not isinstance(fields, list) or not all(isinstance(field, str) for field in fields)):
+                raise ApiError('invalidParams', 'fields must be a list of card record field names.')
             kind = 'notes' if name.startswith('notes') else 'cards'
             ids = p.get(kind)
             if name == 'notesInfo' and p['query'] is not None:
@@ -738,7 +761,7 @@ class Legacy:
                         native = self.service.note(str(id)) if kind == 'notes' else self.service.card(str(id))
                         result.append({'noteId' if kind == 'notes' else 'cardId': int(id), 'mod': native.mod})
                     else:
-                        result.append(self.record(kind, id))
+                        result.append(self.record(kind, id, fields))
                 except Exception as error:
                     from anki.errors import NotFoundError
                     if isinstance(error, NotFoundError) or isinstance(error, ApiError) and error.kind == 'notFound':

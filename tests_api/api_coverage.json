@@ -1648,6 +1648,65 @@
       ],
       "legacy": [],
       "notes": "At the 100-snapshot capacity, new searches fail while existing searches can advance without evicting other snapshots; completing a search frees capacity."
+    },
+    {
+      "source": "tests_api/test_jiten.py",
+      "case": "test_cards_info_field_projection_preserves_legacy_values",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "cardsInfo"
+      ],
+      "notes": "Filtered and unfiltered records agree for native cards; checks null, empty, selective, duplicate and unknown properties, missing IDs, duplicate card IDs and empty probes."
+    },
+    {
+      "source": "tests_api/test_jiten.py",
+      "case": "test_cards_info_rejects_invalid_field_filters",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "cardsInfo"
+      ],
+      "notes": "HTTP admission rejects malformed field selectors even with no card IDs."
+    },
+    {
+      "source": "tests_api/test_jiten.py",
+      "case": "test_jiten_large_filtered_import_and_review_pages",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "cardsInfo",
+        "findCards",
+        "getReviewsOfCards"
+      ],
+      "notes": "Native 2,000-card Jiten batch returns selected nested fields without rendering, predictions, token churn or card mutation. Numeric/string IDs return all 12,000 raw reviews across more than 100 pages and release snapshots."
+    },
+    {
+      "source": "tests_api/test_jiten.py",
+      "case": "test_jiten_versioned_media_batch",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "storeMediaFile",
+        "multi",
+        "retrieveMediaFile"
+      ],
+      "notes": "Versioned Jiten media subrequests retain envelopes, base64 content and false for missing files."
+    },
+    {
+      "source": "tests_api/test_jiten.py",
+      "case": "test_jiten_field_probe_with_browser_origin_and_key",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "cardsInfo"
+      ],
+      "notes": "Jiten-origin field probe succeeds through controlled HTTP admission with and without an API key."
     }
   ],
   "unreferenced": {
