@@ -1268,6 +1268,33 @@
       "notes": "Real disposable collection; asserts exact historical legacy error strings and relevant mutation effects. Direct forwarder calls bind public signatures; bypass HTTP and admission."
     },
     {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_model_conversion_maps_lone_template_by_position",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [
+        "scheduling.answer",
+        "scheduling.predict"
+      ],
+      "legacy": [
+        "addNote",
+        "createModel",
+        "updateNoteModel"
+      ],
+      "notes": "Real disposable collection; asserts that a reviewed card keeps its id, ordinal, and scheduling when its lone template has no namesake in the target. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_model_conversion_maps_lone_template_by_position",
+      "layer": "legacy-forwarder",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "updateNoteModel"
+      ],
+      "notes": "Real disposable collection; asserts compatibilityError and untouched cards when several source templates lack namesakes. Direct forwarder calls bind public signatures; bypass HTTP and admission."
+    },
+    {
       "source": "tests_api/test_legacy_errors.py",
       "case": "test_legacy_missing_entities_and_failure_sentinels",
       "layer": "controlled-admission",

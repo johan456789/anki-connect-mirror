@@ -641,3 +641,27 @@ def test_search_uses_native_browser_sort_columns(native, method, direction):
                 cursor=page['nextCursor'])['ids'] == expected[2:]
     with pytest.raises(ApiError, match='sort column'):
         call(service, method, query='', sort={'column': 'missingColumn', 'direction': direction})
+
+
+def test_legacy_model_conversion_maps_lone_template_by_position(native):
+    """A lone source template without a namesake keeps its cards, as raw mid assignment did."""
+    owner, service = native
+    old(native, 'createModel', modelName='Renamed Card', inOrderFields=['Question', 'Answer'],
+        cardTemplates=[{'Name': 'Only', 'Front': '{{Question}}', 'Back': '{{Answer}}'}])
+    id = old(native, 'addNote', note=legacy_note('keep'))
+    card = service.col.get_note(id).card_ids()[0]
+    prediction = call(service, 'scheduling.predict', cardId=str(card))
+    call(service, 'scheduling.answer', cardId=str(card), rating='good', stateToken=prediction['stateToken'])
+    before = service.col.get_card(card)
+    old(native, 'updateNoteModel', note={'id': id, 'modelName': 'Renamed Card',
+                                         'fields': {'Question': 'kept', 'Answer': 'answer'}})
+    note = service.col.get_note(id)
+    assert note['Question'] == 'kept' and note.card_ids() == [card]
+    after = service.col.get_card(card)
+    assert (after.ord, after.reps, after.ivl, after.due) == (0, before.reps, before.ivl, before.due)
+    # Several source templates without namesakes stay ambiguous and leave the note untouched.
+    both = old(native, 'addNote', note={**legacy_note('both'), 'modelName': 'Basic (and reversed card)'})
+    with pytest.raises(ApiError) as caught:
+        old(native, 'updateNoteModel', note={'id': both, 'modelName': 'Renamed Card', 'fields': {'Question': 'x'}})
+    assert caught.value.kind == 'compatibilityError'
+    assert len(service.col.get_note(both).card_ids()) == 2

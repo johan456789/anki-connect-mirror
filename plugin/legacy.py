@@ -710,10 +710,16 @@ class Legacy:
             plan = self.s('notes.planConversion', source={'id': original['noteType']['id']}, target={'id': target['id']})
             old = self.model(id=original['noteType']['id'])
             for key, mapping in [('flds', plan['fields']), ('tmpls', plan['templates'])]:
-                for entry in mapping:
-                    matches = [item['name'] for item in old[key] if item['name'].lower() == entry['target'].lower()]
+                names = [[item['name'] for item in old[key] if item['name'].lower() == entry['target'].lower()]
+                         for entry in mapping]
+                for matches in names:
                     if len(matches) > 1 or (key == 'tmpls' and not matches and len(old[key]) > 1):
                         raise ApiError('compatibilityError', 'Explicit conversion mappings are required.')
+                # Raw mid assignment kept cards by ordinal. A lone source template without a
+                # namesake keeps Anki's positional mapping instead of losing its cards.
+                if key == 'tmpls' and not any(names):
+                    continue
+                for entry, matches in zip(mapping, names):
                     entry['source'] = matches[0] if matches else None
             self.s('notes.convert', ids=[str(source['id'])], target={'id': target['id']}, fields=plan['fields'], templates=plan['templates'], planToken=plan['token'])
             fields = {item['name']: '' for item in target['fields']}

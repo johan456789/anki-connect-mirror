@@ -2994,7 +2994,7 @@ This allows you to change the note's model, update its fields with new content, 
 
 **Completion:** completed.
 
-**Behavior:** native conversion; ambiguous mappings return compatibilityError; post-conversion content failure may leave conversion committed and must be reported.
+**Behavior:** native conversion; fields and templates map by name, and a lone source template without a namesake maps by position so its cards keep their scheduling; other ambiguous mappings return compatibilityError; post-conversion content failure may leave conversion committed and must be reported.
 
 **v1 equivalent:** [notes.planConversion](API_V1.md#notesplanconversion), [notes.convert](API_V1.md#notesconvert), [notes.update](API_V1.md#notesupdate).
 
