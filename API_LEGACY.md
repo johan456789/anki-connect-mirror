@@ -460,6 +460,9 @@ better performance.
 
 **Returns:** Numeric card ID array.
 
+Returns all matching IDs across internal pages and releases the search snapshot
+when complete.
+
 **Completion:** completed.
 
 **v1 equivalent:** [cards.search](API_V1.md#cardssearch).

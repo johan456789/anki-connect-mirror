@@ -215,6 +215,9 @@ Repeat the same query, sort, and limit on subsequent pages. Cursors snapshot the
 ordered matching IDs for ten minutes: deleted resources are omitted, and newly
 matching resources appear in a new search. Review pagination likewise snapshots
 IDs; `afterId` is exclusive. Methods without cursors return their whole list.
+Each successful continuation consumes its cursor; use the returned `nextCursor`
+for the following page. Completing a search releases its snapshot. Up to 100
+unfinished snapshots can be retained, each containing at most 1,000,000 IDs.
 
 ### Operations and ordered commands
 

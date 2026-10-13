@@ -1625,6 +1625,29 @@
         "storeMediaFile"
       ],
       "notes": "Disposable real Anki GUI: actual HTTP GET LunaTranslator first-add/model-refresh/duplicate/media/overwrite flow, GSM POST full-path media, and blank conditional question fallback. Native Qt/task completion and persistence checked. LunaTranslator/GSM clients themselves are not launched."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_legacy_large_search_releases_snapshot",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "findCards",
+        "findNotes"
+      ],
+      "notes": "Native collections with 10,001 notes/cards; repeated legacy searches return every matching ID across more than 100 default-sized pages and leave no retained cursors."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
+      "case": "test_search_cursor_capacity_preserves_other_snapshots",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.search"
+      ],
+      "legacy": [],
+      "notes": "At the 100-snapshot capacity, new searches fail while existing searches can advance without evicting other snapshots; completing a search frees capacity."
     }
   ],
   "unreferenced": {

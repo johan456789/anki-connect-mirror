@@ -166,11 +166,53 @@ def test_search_cursor_query_binding_and_deleted_ids(native):
     owner, service = native
     ids = [call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': str(index)})['noteId'] for index in range(3)]
     page = call(service, 'notes.search', query='', limit=1)
+    with pytest.raises(ApiError) as error:
+        call(service, 'notes.search', query='tag:x', limit=1, cursor=page['nextCursor'])
+    assert error.value.kind == 'invalidParams'
+    assert page['nextCursor'] in owner.runtime.cursors
     call(service, 'notes.delete', ids=[ids[1]])
     second = call(service, 'notes.search', query='', limit=1, cursor=page['nextCursor'])
     assert second['ids'] == []
-    with pytest.raises(ApiError):
-        call(service, 'notes.search', query='tag:x', limit=1, cursor=page['nextCursor'])
+    with pytest.raises(ApiError) as error:
+        call(service, 'notes.search', query='', limit=1, cursor=page['nextCursor'])
+    assert error.value.kind == 'staleCursor'
+    final = call(service, 'notes.search', query='', limit=1, cursor=second['nextCursor'])
+    assert final == {'ids': [ids[2]], 'nextCursor': None}
+    assert not owner.runtime.cursors
+
+
+@pytest.mark.parametrize('action', ['findCards', 'findNotes'])
+def test_legacy_large_search_releases_snapshot(native, action):
+    from anki.collection import AddNoteRequest
+    owner, service = native
+    model = service.col.models.by_name('Basic')
+    notes = []
+    for index in range(10001):
+        note = service.col.new_note(model)
+        note['Front'] = str(index)
+        notes.append(AddNoteRequest(note=note, deck_id=1))
+    service.col.add_notes(notes)
+    expected = sorted(service.col.find_cards('') if action == 'findCards' else service.col.find_notes(''))
+    legacy = Legacy(owner, service)
+    for _ in range(2):
+        assert legacy.call(action, {'query': ''}) == expected
+        assert not owner.runtime.cursors
+
+
+def test_search_cursor_capacity_preserves_other_snapshots(native):
+    owner, service = native
+    for index in range(3):
+        call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': str(index)})
+    pages = [call(service, 'notes.search', query='', limit=1) for _ in range(100)]
+    with pytest.raises(ApiError) as error:
+        call(service, 'notes.search', query='', limit=1)
+    assert error.value.kind == 'busy'
+    second = call(service, 'notes.search', query='', limit=1, cursor=pages[0]['nextCursor'])
+    assert len(owner.runtime.cursors) == 100
+    assert all(page['nextCursor'] in owner.runtime.cursors for page in pages[1:])
+    call(service, 'notes.search', query='', limit=1, cursor=second['nextCursor'])
+    assert len(owner.runtime.cursors) == 99
+    assert call(service, 'notes.search', query='', limit=1)['nextCursor']
 
 
 def test_legacy_signatures_and_reflection(native, monkeypatch):
