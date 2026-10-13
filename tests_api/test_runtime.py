@@ -599,3 +599,17 @@ def test_legacy_browser_reply_waits_for_gui_initialization(admitted, monkeypatch
     assert not reply.done
     browser_ready.resolve({})
     assert reply.value == {'result': [], 'error': None}
+
+
+def test_note_type_delete_unused_reports_items_and_removes_type(native):
+    owner, service = native
+    model = call(service, 'noteTypes.create', name='Disposable', fields=[{'name': 'Front'}],
+                 templates=[{'name': 'Card', 'questionHtml': '{{Front}}', 'answerHtml': '{{Front}}'}])
+    note = call(service, 'notes.create', noteType={'id': model['id']}, deck={'name': 'Default'}, fields={'Front': 'x'})
+    in_use = call(service, 'noteTypes.deleteUnused', noteTypes=[{'id': model['id']}])
+    assert in_use['items'][0]['error']['data']['type'] == 'conflict'
+    assert service.col.models.get(int(model['id'])) is not None
+    call(service, 'notes.delete', ids=[note['noteId']])
+    deleted = call(service, 'noteTypes.deleteUnused', noteTypes=[{'name': 'Disposable'}])
+    assert deleted == {'items': [{'index': 0, 'result': {'changed': True}}]}
+    assert service.col.models.get(int(model['id'])) is None

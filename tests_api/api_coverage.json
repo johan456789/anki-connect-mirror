@@ -319,6 +319,20 @@
     },
     {
       "source": "tests_api/test_runtime.py",
+      "case": "test_note_type_delete_unused_reports_items_and_removes_type",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "noteTypes.create",
+        "noteTypes.deleteUnused",
+        "notes.create",
+        "notes.delete"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; asserts the in-use conflict item, the deleted item result, and that the note type is removed. Calls Services.execute through the call helper."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
       "case": "test_historical_reviews_transaction_and_sync_flags",
       "layer": "native-service",
       "outcome": "success",
