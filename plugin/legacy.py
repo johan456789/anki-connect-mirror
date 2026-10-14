@@ -111,6 +111,11 @@ class Legacy:
             self.service = self.runtime.service()
         return self.resolve({'id': str(id)} if id is not None else self.ref(name), 'noteType')
 
+    @staticmethod
+    def without_empty_tags(tags):
+        # Older clients include empty tag entries; native Anki ignores them.
+        return [tag for tag in tags if tag != '']
+
     def created_note(self, source, pure=False):
         source = copy.deepcopy(source)
         model = self.model(source['modelName'])
@@ -138,7 +143,7 @@ class Legacy:
             deck_name = scoped.get('deckName')
             duplicates['deck'] = self.ref(source['deckName'] if deck_name is None else deck_name)
         data = {'noteType': self.ref(source['modelName']), 'deck': self.ref(source['deckName']),
-                'fields': fields, 'tags': list(source.get('tags', [])), 'duplicates': duplicates,
+                'fields': fields, 'tags': self.without_empty_tags(source.get('tags', [])), 'duplicates': duplicates,
                 # Legacy creation lets Anki generate its fallback card. Rendering
                 # a blank template is not the same as a native add returning 0.
                 'rejectEmptyQuestions': False}
@@ -433,6 +438,8 @@ class Legacy:
                     if field not in [value['name'] for value in model['flds']]:
                         raise ApiError('notFound', 'Field "' + field + '" not found in current note')
             patch = {key: value for key, value in source.items() if key in ('fields', 'tags')}
+            if 'tags' in patch:
+                patch['tags'] = self.without_empty_tags(patch['tags'])
             for old, new in [('deckName', 'deck'), ('modelName', 'noteType')]:
                 if old in source:
                     patch[new] = self.ref(source[old])
@@ -684,7 +691,7 @@ class Legacy:
                 current = self.s('notes.get', id=str(source['id']))
                 patch['fields'] = {key: value for key, value in source['fields'].items() if key in current['fields']}
             if name != 'updateNoteFields' and 'tags' in source:
-                patch['tags'] = [source['tags']] if isinstance(source['tags'], str) else list(source['tags'])
+                patch['tags'] = self.without_empty_tags([source['tags']] if isinstance(source['tags'], str) else source['tags'])
             if not patch:
                 raise ApiError('invalidParams', 'Must provide a "fields" or "tags" property.')
             self.runtime.dispatcher.params('notes.update', {'id': str(source['id']), 'patch': patch})
@@ -727,12 +734,12 @@ class Legacy:
                 actual = next((field for field in fields if field.lower() == name.lower()), None)
                 if actual:
                     fields[actual] = value
-            self.s('notes.update', id=str(source['id']), patch={'fields': fields, **({'tags': source['tags']} if 'tags' in source else {})})
+            self.s('notes.update', id=str(source['id']), patch={'fields': fields, **({'tags': self.without_empty_tags(source['tags'])} if 'tags' in source else {})})
             return None
         if name == 'getNoteTags':
             return self.s('notes.get', id=str(p['note']))['tags']
         if name in ('addTags', 'removeTags'):
-            tags = self.service.col.tags.split(p['tags']) if isinstance(p['tags'], str) else list(p['tags'])
+            tags = self.without_empty_tags(self.service.col.tags.split(p['tags']) if isinstance(p['tags'], str) else p['tags'])
             method = 'tags.remove' if name == 'removeTags' or not p.get('add', True) else 'tags.add'
             self.unwrap(self.s(method, noteIds=self.ids(p['notes']), tags=tags), missing=True)
             return None

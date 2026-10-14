@@ -212,3 +212,28 @@ def test_obsidian_nested_item_failures_preserve_order_and_successes(obsidian, tm
     assert set(media[0]) == {'result', 'error'} and media[0]['result'] is None and media[0]['error']
     assert parse(media[1]) == 'good.png'
     assert (Path(service.col.media.dir()) / 'good.png').read_bytes() == b'good'
+
+
+@pytest.mark.parametrize('version', [2, 6])
+def test_obsidian_sync_empty_tags_cloze_report(obsidian, version):
+    owner, service, _, _, _ = obsidian
+    fields = {'oid': 'undefined', 'Text': '{{c1:: placeholder}}', 'Extra': '',
+              'Breadcrumb': '<a href="obsidian://vault/Pharmacy/Introduction.md">Pharmacy</a>',
+              'Config': '', 'Tobedefinedlater': '', 'Tobedefinedlater2': ''}
+    parse(exchange(obsidian, request('createDeck', deck='Math')))
+    parse(exchange(obsidian, request('createModel', modelName='ObsidianAnkiSyncModel',
+        inOrderFields=list(fields), isCloze=True,
+        cardTemplates=[{'Name': 'Cloze', 'Front': '{{cloze:Text}}', 'Back': '{{cloze:Text}}'}])))
+    note = {'modelName': 'ObsidianAnkiSyncModel', 'deckName': 'Math', 'fields': fields,
+            'tags': ['', 'Pharmacy', 'ObsidianAnkiSync', 'replaceblock'],
+            'options': {'allowDuplicate': True}}
+    payload = {**request('addNotes', notes=[note]), 'version': version}
+    reply = exchange(obsidian, payload)
+    ids = parse(reply) if version == 6 else reply
+    assert len(ids) == 1 and type(ids[0]) is int
+    actual = service.col.get_note(ids[0])
+    assert dict(actual.items()) == fields
+    assert set(actual.tags) == {'Pharmacy', 'ObsidianAnkiSync', 'replaceblock'}
+    assert service.col.decks.name(actual.cards()[0].did) == 'Math'
+    assert len(actual.card_ids()) == 1
+    assert note['tags'][0] == ''

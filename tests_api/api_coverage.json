@@ -2,6 +2,38 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_compatibility.py",
+      "case": "test_legacy_empty_tags_creation_and_updates",
+      "layer": "legacy-forwarder",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "addNotes",
+        "canAddNoteWithErrorDetail",
+        "canAddNotes",
+        "updateNote",
+        "updateNoteTags",
+        "updateNoteModel",
+        "addTags",
+        "removeTags"
+      ],
+      "notes": "Real disposable collection; mixed and all-empty tag lists exercise eligibility, creation, replacement, addition and removal. Asserts native persisted tags, unchanged input, rejection of non-string tags and strict v1 validation."
+    },
+    {
+      "source": "tests_api/test_obsidian.py",
+      "case": "test_obsidian_sync_empty_tags_cloze_report",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createDeck",
+        "createModel",
+        "addNotes"
+      ],
+      "notes": "Version-2 and version-6 HTTP requests reproduce the reported ObsidianAnkiSync Cloze payload with an empty tag. Asserts native fields, tags, deck and card creation; controlled Qt admission."
+    },
+    {
       "source": "tools/smoke_gui.py",
       "case": "browser-startup",
       "layer": "real-gui",

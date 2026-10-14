@@ -24,6 +24,11 @@ Each request has an `action`, `version`, optional `params` object, and optional
 `key`. Use version 6 for current clients. Legacy entity IDs are JSON numbers,
 unlike v1's decimal strings. Paths refer to the machine running Anki.
 
+Legacy note creation, eligibility checks, tag updates, and Add dialog drafts ignore
+empty strings in tag lists. For example, `"tags": ["", "Pharmacy"]`
+stores only `Pharmacy`. An all-empty list clears tags when replacing them.
+API v1 continues to reject empty tag entries.
+
 ### Python client
 
 ```python
