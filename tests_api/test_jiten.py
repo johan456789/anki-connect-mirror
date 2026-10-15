@@ -42,7 +42,7 @@ def test_cards_info_field_projection_preserves_legacy_values(admitted, fields):
     assert invoke(owner, drain, 'cardsInfo', cards=[], fields=fields) == []
 
 
-@pytest.mark.parametrize('fields', ['cardId', {}, [1], [None]])
+@pytest.mark.parametrize('fields', [1, {}, [1], [None]])
 def test_cards_info_rejects_invalid_field_filters(admitted, fields):
     owner, _, drain, _, _ = admitted
     reply = exchange(owner, drain, {'action': 'cardsInfo', 'version': 6,

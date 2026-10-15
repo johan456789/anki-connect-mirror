@@ -125,9 +125,9 @@ def test_legacy_batch_duplicate_and_native_empty_question_fallback(native):
 
 
 @pytest.mark.parametrize('options,label', [
-    ({'allowDuplicate': 1}, 'allowDuplicate'),
-    ({'duplicateScopeOptions': {'checkChildren': 'false'}}, 'duplicateScopeOptions.checkChildren'),
-    ({'duplicateScopeOptions': {'checkAllModels': 0}}, 'duplicateScopeOptions.checkAllModels'),
+    ({'allowDuplicate': 'sometimes'}, 'allowDuplicate'),
+    ({'duplicateScopeOptions': {'checkChildren': 'no children'}}, 'duplicateScopeOptions.checkChildren'),
+    ({'duplicateScopeOptions': {'checkAllModels': 2}}, 'duplicateScopeOptions.checkAllModels'),
 ])
 def test_legacy_duplicate_option_errors(native, options, label):
     source = {**legacy_note('new'), 'options': options}
@@ -170,8 +170,8 @@ def test_legacy_duplicate_option_errors(native, options, label):
     ('notesInfo', {}, 'Must provide either "notes" or a "query"'),
     ('deleteDecks', {'decks': ['Default']},
      "Since Anki 2.1.28 it's not possible to delete decks without deleting cards as well"),
-    ('apiReflect', {'scopes': 'actions'}, 'scopes has invalid value'),
-    ('apiReflect', {'scopes': ['actions'], 'actions': 'addNote'}, 'actions has invalid value'),
+    ('apiReflect', {'scopes': 1}, 'scopes has invalid value'),
+    ('apiReflect', {'scopes': ['actions'], 'actions': 1}, 'actions has invalid value'),
     ('storeMediaFile', {'filename': 'missing.txt'}, 'You must provide a "data", "path", or "url" field.'),
 ])
 def test_legacy_shared_errors_keep_historical_wording(native, action, params, message):

@@ -64,6 +64,11 @@ ordering. Neither command form creates a transaction across items. Exit begins
 only after outstanding socket replies drain.
 Legacy batches preserve unbounded action counts for whole-vault Obsidian syncs;
 the HTTP request size limit still applies. The v1 batch count limit is separate.
+Legacy envelopes and arguments are normalized before admission guards: harmless
+surplus parameters, null optional defaults, decimal strings, boolean spellings,
+and single-item lists are handled at the compatibility boundary. Note fields,
+tags, and attachment targets share legacy normalization across creation and writes.
+V1 schemas remain strict; authentication and batch preflight rules are unchanged.
 
 ## Sessions and editor coordination
 

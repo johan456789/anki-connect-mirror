@@ -149,7 +149,7 @@ try:
             import base64
             open_media = ('open-' + str(svelte) + '.txt').lower()
             assert old('guiAddCards', note={'modelName': 'Basic', 'deckName': 'Default',
-                       'fields': {'Front': '', 'Back': ''},
+                       'fields': {' front ': '', 'back': None}, 'tags': None, 'options': None,
                        'audio': [{'filename': open_media, 'data': base64.b64encode(b'open media').decode(),
                                   'fields': []}]}) == 0
             assert (Path(aqt.mw.col.media.dir()) / open_media).read_bytes() == b'open media'
@@ -172,9 +172,9 @@ try:
             assert updated['fields']['Back'] == 'Draft answer appended', updated
             import base64
             media_name = ('draft-' + str(svelte) + '.txt').lower()
-            assert old('guiAddNoteSetData', note={'fields': {'Back': ' legacy'},
+            assert old('guiAddNoteSetData', note={'fields': {' back ': ' legacy'}, 'tags': ' gui-smoke extra ',
                        'audio': [{'filename': media_name, 'data': base64.b64encode(b'draft media').decode(),
-                                  'fields': ['Back']}]}, append=True)
+                                  'fields': ' back '}]}, append='true')
             assert (Path(aqt.mw.col.media.dir()) / media_name).read_bytes() == b'draft media'
             print('PASS update Add', updated['variant'], flush=True)
             dialog = owner.runtime.gui.add_dialog()
@@ -192,6 +192,7 @@ try:
             wait_until(lambda: aqt.mw._background_op_count == 0)
             saved = aqt.mw.col.find_notes('"Draft question ' + str(svelte) + '"')
             assert len(saved) == 1 and aqt.mw.col.get_note(saved[0])['Back'] == 'Draft answer appended legacy[sound:' + media_name + ']'
+            assert set(aqt.mw.col.get_note(saved[0]).tags) == {'gui-smoke', 'extra'}
             print('PASS save Add', draft['variant'], flush=True)
             if not hasattr(dialog.editor, 'note'):
                 wait_until(lambda: not any(result(owner.runtime.gui.javascript(dialog.editor, 'return getNoteInfo().fields;'))))

@@ -4,6 +4,7 @@ Binding snapshots were captured from de6e6e1 (before f69c9e4), not generated
 from the new dispatcher. Native cases were compared with that implementation's
 handler against disposable collections. Safety changes documented in API_LEGACY
 (editor/lifecycle guards, protected scheduler writes, limits) remain explicit.
+Missing-argument wording is preserved; surplus parameters are now ignored.
 """
 import json
 from pathlib import Path
@@ -22,13 +23,21 @@ BINDING = json.loads(Path(__file__).with_name('legacy_binding_errors.json').read
 @pytest.mark.parametrize('version', [2, 4, 6])
 @pytest.mark.parametrize('case', BINDING, ids=lambda c: c['action'] + ('-unexpected' if c['params'] else '-missing'))
 def test_every_legacy_action_argument_errors_match_baseline(case, version, monkeypatch):
-    """All retained action binders, including addNote and multi, match the frozen baseline."""
+    """Missing addNote/multi arguments retain their wording; surplus keys are ignored."""
     monkeypatch.setattr(util, 'setting', util.DEFAULT_CONFIG.__getitem__)
     owner = AnkiConnect()
     payload = {'action': case['action'], 'version': version, 'params': case['params']}
-    assert owner.handler(payload) == case['reply']
+    expected = case['reply']
+    if case['params']:
+        missing = next((item for item in BINDING if item['action'] == case['action'] and not item['params']), None)
+        if missing is None:
+            # Resolve without executing lifecycle/GUI actions in this binder test.
+            assert owner.resolve_action(case['action'], version, case['params'])[0] == case['action']
+            return
+        expected = missing['reply']
+    assert owner.handler(payload) == expected
     pending = owner.handler_async(payload)
-    assert pending.done and pending.value == case['reply']
+    assert pending.done and pending.value == expected
 
 
 def test_binding_baseline_covers_every_retained_legacy_action():

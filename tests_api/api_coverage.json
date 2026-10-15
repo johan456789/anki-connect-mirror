@@ -2,6 +2,214 @@
   "description": "Reviewed Anki compatibility evidence inventory. Prioritize real native services and GUI boundaries across Anki versions. Successful calls are partial evidence; protocol checks and UI deferrals are tracked separately.",
   "evidence": [
     {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_false_or_invalid_deletion_flags_preserve_decks",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "createDeck",
+        "deleteDecks"
+      ],
+      "notes": "A real disposable deck remains present after string false/zero or invalid deletion flags; accepting scalar deck inputs never turns false into destructive approval."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_nonempty_malformed_parameter_containers_are_rejected",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "createDeck"
+      ],
+      "notes": "Synchronous dispatch and HTTP reject nonempty arrays, strings and booleans as parameter containers before admitting work or creating decks."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_envelope_normalization_preserves_reply_versions",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "deckNames"
+      ],
+      "notes": "Native deck reads through HTTP and synchronous dispatch cover numeric-string/null versions, null/empty-array parameter containers, ignored surplus keys, unchanged requests and preserved versioned reply envelopes."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_scalar_lists_ids_fields_tags_and_scheduling",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "canAddNotes",
+        "addNotes",
+        "addNote",
+        "notesInfo",
+        "cardsInfo",
+        "getDecks",
+        "cardsToNotes",
+        "updateNoteFields",
+        "addTags",
+        "updateNote",
+        "setEaseFactors",
+        "getEaseFactors",
+        "suspend",
+        "areSuspended",
+        "setDueDate",
+        "answerCards",
+        "deleteNotes"
+      ],
+      "notes": "Real collections and controlled Qt admission exercise scalar lists, decimal string IDs/ease factors/ease values, normalized field keys, null field values, string tags and false booleans. Asserts native note/card effects, a new review with the requested ease, notifications and preservation of an unrelated note on deletion."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_tags_and_null_options_are_consistent",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "updateNote",
+        "updateNoteTags",
+        "updateNoteModel",
+        "addTags"
+      ],
+      "notes": "Real native creation, tag replacement and model conversion accept null/whitespace/list tag forms and null creation options. Asserts persisted tags and request immutability; controlled Qt scheduling."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_duplicate_booleans_and_null_defaults",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "canAddNoteWithErrorDetail",
+        "canAddNote",
+        "getMediaFilesNames",
+        "apiReflect"
+      ],
+      "notes": "Native duplicate checks distinguish string true/false, accept numeric/null nested defaults, retain duplicate wording and preserve note counts. Also exercises null optional pattern defaults and scalar reflection filters."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_media_targets_and_string_false_preserve_existing_files",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "canAddNote",
+        "updateNoteFields"
+      ],
+      "notes": "All three media kinds use actual native media storage. Case/whitespace/scalar/repeated targets append once, including fields omitted from an update. String false renames a collision and preserves original bytes. Pure eligibility leaves no file; creation persists the expected markup and bytes."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_exact_field_names_win_and_ambiguous_updates_leave_notes_unchanged",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "updateNoteFields"
+      ],
+      "notes": "Native note contents demonstrate exact-name precedence during creation and updates; conflicting non-exact aliases fail before changing the note."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_scalar_model_inputs_and_integer_parameters",
+      "layer": "controlled-admission",
+      "outcome": "success",
+      "v1": [],
+      "legacy": [
+        "createModel",
+        "findModelsById",
+        "findModelsByName",
+        "modelFieldSetFontSize"
+      ],
+      "notes": "Creates a real normal note type from scalar field/template input and a string false flag; scalar model-name/model-ID lookup and a decimal-string font size have asserted native results."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_normalized_ids_still_block_affected_editors",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "updateNoteFields",
+        "addTags",
+        "deleteNotes"
+      ],
+      "notes": "A controlled editor registration with a real native note verifies that scalar/padded string IDs still trigger the affected-editor guard before queuing work; fields and tags remain unchanged. No real widget completion is claimed."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_normalized_nested_batches_keep_preflight_and_credentials",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "multi",
+        "version",
+        "createDeck",
+        "guiExitAnki"
+      ],
+      "notes": "Normalized nested version/parameter forms retain independent child credentials and versions. Both synchronous and asynchronous preflight reject an exit followed by work before deck creation or shutdown can begin."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_permission_context_and_origin_checks_survive_null_params",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "requestPermission",
+        "version"
+      ],
+      "notes": "A mocked permission decision confirms transport-owned origin/allowed context for null parameters. Unknown origins remain rejected for ordinary requests; no real permission dialog is exercised."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_invalid_ids_do_not_turn_into_queries_or_mutations",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [],
+      "legacy": [
+        "areDue",
+        "getIntervals",
+        "deleteNotes"
+      ],
+      "notes": "Fractional/boolean/object/out-of-range/non-decimal IDs are rejected before queries or writes; an existing real native note is preserved."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_invalid_conversion_content_is_rejected_before_native_conversion",
+      "layer": "controlled-admission",
+      "outcome": "failure",
+      "v1": [],
+      "legacy": [
+        "addNote",
+        "updateNoteModel"
+      ],
+      "notes": "Malformed field/tag content is rejected before native model conversion, with original note type, fields and card IDs preserved."
+    },
+    {
+      "source": "tests_api/test_legacy_normalization.py",
+      "case": "test_v1_keeps_strict_types_and_unknown_parameter_validation",
+      "layer": "validation-only",
+      "outcome": "not-executed",
+      "v1": [
+        "cards.getMany",
+        "notes.create",
+        "cards.setSuspended",
+        "decks.list"
+      ],
+      "legacy": [],
+      "notes": "V1 still rejects scalar ID arrays, string tags, null field values, string booleans and surplus parameters without changing the native collection."
+    },
+    {
       "source": "tests_api/test_compatibility.py",
       "case": "test_legacy_empty_tags_creation_and_updates",
       "layer": "legacy-forwarder",
@@ -985,7 +1193,7 @@
         "guiAddCards",
         "guiAddNoteSetData"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred. Both Add editor variants also exercise case/whitespace field matching, null initial tags/options/fields, string tags, scalar attachment targets and string append booleans, with persisted note/media/tag assertions."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -1489,7 +1697,7 @@
         "addNote",
         "multi"
       ],
-      "notes": "209 frozen binding errors cover all 122 retained actions at versions 2, 4 and 6, in both synchronous and asynchronous dispatch. Method bodies are not executed."
+      "notes": "The frozen pre-rewrite binding snapshots cover all 122 retained actions at versions 2, 4 and 6. Missing-argument errors retain their wording in synchronous and asynchronous dispatch. Surplus keys are ignored; optional-only actions are resolved without executing their bodies."
     },
     {
       "source": "tests_api/test_legacy_errors.py",

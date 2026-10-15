@@ -27,6 +27,8 @@ unlike v1's decimal strings. Paths refer to the machine running Anki.
 Legacy note creation, eligibility checks, tag updates, and Add dialog drafts ignore
 empty strings in tag lists. For example, `"tags": ["", "Pharmacy"]`
 stores only `Pharmacy`. An all-empty list clears tags when replacing them.
+Tags also accept a whitespace-separated string or whitespace-separated list entries;
+null means an empty list, and null entries are ignored. Duplicate tags are handled by native Anki.
 API v1 continues to reject empty tag entries.
 
 ### Python client
@@ -102,6 +104,49 @@ the `result`/`error` envelope. Prefer an explicit version 6.
 ## Compatibility and completion
 
 The legacy API remains supported; migrating an existing application is optional.
+Legacy requests, including nested `multi` items, use these input normalization rules:
+
+- Extra action parameters are ignored. Missing required parameters still fail.
+- Omitted or null `params`, and an empty `params` array, mean `{}`. Other non-object
+  parameter containers fail. Null optional arguments use their documented defaults.
+- Decimal strings are accepted for the request version, IDs, ease values, ease
+  factors, field/template indexes, and font sizes. Surrounding whitespace is ignored.
+  Null version means version 4. Fractional IDs and non-decimal ID strings fail.
+  Integral values such as `123.0` are accepted within the safe integer range.
+- List parameters such as `cards`, `notes`, `decks`, `modelIds`, `modelNames`,
+  `easeFactors`, and `answers` accept a single item. Null lists mean empty lists;
+  `notesInfo(notes=null)` retains its query fallback. `multi.actions` must remain
+  an array of request objects, with the same ordering and nesting checks.
+- Boolean options accept booleans, numeric `0`/`1`, and case-insensitive strings
+  `"false"`/`"true"`/`"0"`/`"1"`. Other values fail; `"false"` never enables an option.
+  Null note `options` and `duplicateScopeOptions` use the normal defaults.
+- Note field keys and attachment targets accept unambiguous case-insensitive
+  matches, including surrounding whitespace. Exact field keys take precedence;
+  conflicting non-exact keys fail. A null field value means an empty string.
+  Unknown fields are ignored during creation and note updates; Add dialog draft
+  updates still report unknown fields. Media targets accept a string or list;
+  repeated targets append each attachment once per field.
+
+For example, this updates a Basic note's `Back`, clears its `Front`, and replaces
+its tags with `one` and `two`, returning `{"result":null,"error":null}` on success:
+
+```json
+{
+  "action": "updateNote",
+  "version": "6",
+  "params": {
+    "clientMetadata": "ignored",
+    "note": {
+      "id": "1700000000000",
+      "fields": {" back ": "answer", "Front": null},
+      "tags": " one two "
+    }
+  }
+}
+```
+
+API v1 retains its strict input validation. Authentication keys, origin permissions,
+editor/lifecycle guards, media limits, and protected writes keep their existing rules.
 Both endpoints use the same collection services. Some unsafe historical behavior
 now fails explicitly or follows corrected native behavior:
 
@@ -2912,7 +2957,7 @@ For an existing duplicate, the result entry is:
 
 ### `updateNoteFields`
 
-Update supplied fields of the note identified by `note.id`, with optional inline media. Unknown field names are ignored for legacy compatibility. An affected open editor causes an error rather than a silent overwrite.
+Update supplied fields of the note identified by `note.id`, with optional inline media. Field names use the shared legacy matching rules; unknown names are ignored. Attachments can target fields omitted from the text patch and append to their existing contents. An affected open editor causes an error rather than a silent overwrite.
 
 **Parameters:** `updateNoteFields(note)`
 
