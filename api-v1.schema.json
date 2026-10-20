@@ -1045,6 +1045,57 @@
       ],
       "additionalProperties": false
     },
+    "QueuedCard": {
+      "type": "object",
+      "properties": {
+        "cardId": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "queue": {
+          "enum": [
+            "new",
+            "learning",
+            "review"
+          ]
+        }
+      },
+      "required": [
+        "cardId",
+        "queue"
+      ],
+      "additionalProperties": false
+    },
+    "SchedulingQueue": {
+      "type": "object",
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QueuedCard"
+          },
+          "maxItems": 1000
+        },
+        "newCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "learningCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "cards",
+        "newCount",
+        "learningCount",
+        "reviewCount"
+      ],
+      "additionalProperties": false
+    },
     "Card": {
       "type": "object",
       "properties": {
@@ -6269,6 +6320,73 @@
             },
             "result": {
               "$ref": "#/$defs/scheduling_get_Result"
+            }
+          },
+          "required": [
+            "jsonrpc",
+            "id",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/RpcErrorResponse"
+        }
+      ]
+    },
+    "scheduling_getQueue_Params": {
+      "type": "object",
+      "properties": {
+        "fetchLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 1
+        },
+        "session": {
+          "$ref": "#/$defs/SessionId"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scheduling_getQueue_Result": {
+      "$ref": "#/$defs/SchedulingQueue"
+    },
+    "scheduling_getQueue_Request": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/RpcId"
+        },
+        "method": {
+          "const": "scheduling.getQueue"
+        },
+        "params": {
+          "$ref": "#/$defs/scheduling_getQueue_Params"
+        }
+      },
+      "required": [
+        "jsonrpc",
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "scheduling_getQueue_Response": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            },
+            "id": {
+              "$ref": "#/$defs/RpcId"
+            },
+            "result": {
+              "$ref": "#/$defs/scheduling_getQueue_Result"
             }
           },
           "required": [
@@ -14275,6 +14393,32 @@
         "staleSession"
       ],
       "notes": ""
+    },
+    "scheduling.getQueue": {
+      "params": {
+        "$ref": "#/$defs/scheduling_getQueue_Params"
+      },
+      "result": {
+        "$ref": "#/$defs/scheduling_getQueue_Result"
+      },
+      "request": {
+        "$ref": "#/$defs/scheduling_getQueue_Request"
+      },
+      "response": {
+        "$ref": "#/$defs/scheduling_getQueue_Response"
+      },
+      "summary": "Read cards in native scheduler order with remaining counts.",
+      "scope": "collection",
+      "effect": "read",
+      "completion": "completed",
+      "undo": "none",
+      "errors": [
+        "collectionUnavailable",
+        "internalError",
+        "invalidParams",
+        "staleSession"
+      ],
+      "notes": "Uses Anki's currently selected deck and respects native limits, mixing and scheduler order. Reading the queue is idempotent; subsequent scheduling changes can change the snapshot."
     },
     "scheduling.predict": {
       "params": {

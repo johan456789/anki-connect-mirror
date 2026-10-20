@@ -507,6 +507,18 @@
     },
     {
       "source": "tests_api/test_runtime.py",
+      "case": "test_scheduler_queue_preserves_native_order_without_consuming_cards",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "notes.create",
+        "scheduling.getQueue"
+      ],
+      "legacy": [],
+      "notes": "Real disposable collection; Verifies native scheduler order, fetch limiting, new-card classification, remaining counts and idempotent repeated reads without review history."
+    },
+    {
+      "source": "tests_api/test_runtime.py",
       "case": "test_bulk_atomic_validation_and_media_ownership",
       "layer": "native-service",
       "outcome": "failure",

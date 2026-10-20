@@ -60,6 +60,24 @@ def test_native_collection_round_trip(native):
     call(service, 'statistics.getSummary', deck={'id': deck['id']})
 
 
+def test_scheduler_queue_preserves_native_order_without_consuming_cards(native):
+    owner, service = native
+    created = [call(service, 'notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'},
+                    fields={'Front': str(index)}) for index in range(3)]
+    expected = [note['cardIds'][0] for note in created[:2]]
+
+    first = call(service, 'scheduling.getQueue', fetchLimit=2)
+    second = call(service, 'scheduling.getQueue', fetchLimit=2)
+    default = call(service, 'scheduling.getQueue')
+
+    assert first == second
+    assert default['cards'] == first['cards'][:1]
+    assert first['cards'] == [{'cardId': id, 'queue': 'new'} for id in expected]
+    assert first['newCount'] == 3
+    assert first['learningCount'] == first['reviewCount'] == 0
+    assert service.col.db.scalar('select count() from revlog') == 0
+
+
 def test_legacy_forwards(native):
     owner, service = native
     legacy = Legacy(owner, service)

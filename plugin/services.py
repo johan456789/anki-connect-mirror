@@ -534,6 +534,13 @@ class Services:
     def scheduling_get(self, cardId):
         return self.state_record(self.card(cardId))
 
+    def scheduling_getQueue(self, fetchLimit=1):
+        queued = self.col.sched.get_queued_cards(fetch_limit=fetchLimit)
+        cards = [{'cardId': str(item.card.id), 'queue': QUEUES[item.queue]}
+                 for item in queued.cards]
+        return {'cards': cards, 'newCount': queued.new_count,
+                'learningCount': queued.learning_count, 'reviewCount': queued.review_count}
+
     def scheduling_predict(self, cardId):
         card = self.card(cardId)
         states = self.col._backend.get_scheduling_states(card.id)

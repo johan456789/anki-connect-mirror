@@ -306,7 +306,7 @@ envelope. Clients should tolerate added response properties.
 - **Notes:** [notes.get](#notesget), [notes.getMany](#notesgetmany), [notes.search](#notessearch), [notes.validate](#notesvalidate), [notes.validateMany](#notesvalidatemany), [notes.create](#notescreate), [notes.createMany](#notescreatemany), [notes.update](#notesupdate), [notes.delete](#notesdelete), [notes.planConversion](#notesplanconversion), [notes.convert](#notesconvert), [notes.findEmpty](#notesfindempty).
 - **Tags:** [tags.list](#tagslist), [tags.add](#tagsadd), [tags.remove](#tagsremove), [tags.replace](#tagsreplace), [tags.deleteUnused](#tagsdeleteunused).
 - **Cards:** [cards.get](#cardsget), [cards.getMany](#cardsgetmany), [cards.search](#cardssearch), [cards.render](#cardsrender), [cards.move](#cardsmove), [cards.setSuspended](#cardssetsuspended), [cards.setFlags](#cardssetflags).
-- **Scheduling:** [scheduling.get](#schedulingget), [scheduling.predict](#schedulingpredict), [scheduling.getDue](#schedulinggetdue), [scheduling.answer](#schedulinganswer), [scheduling.answerMany](#schedulinganswermany), [scheduling.reset](#schedulingreset), [scheduling.setDueDate](#schedulingsetduedate).
+- **Scheduling:** [scheduling.get](#schedulingget), [scheduling.getQueue](#schedulinggetqueue), [scheduling.predict](#schedulingpredict), [scheduling.getDue](#schedulinggetdue), [scheduling.answer](#schedulinganswer), [scheduling.answerMany](#schedulinganswermany), [scheduling.reset](#schedulingreset), [scheduling.setDueDate](#schedulingsetduedate).
 - **Decks:** [decks.list](#deckslist), [decks.get](#decksget), [decks.create](#deckscreate), [decks.update](#decksupdate), [decks.delete](#decksdelete), [decks.getCounts](#decksgetcounts).
 - **Deck presets:** [deckPresets.list](#deckpresetslist), [deckPresets.get](#deckpresetsget), [deckPresets.create](#deckpresetscreate), [deckPresets.update](#deckpresetsupdate), [deckPresets.assign](#deckpresetsassign), [deckPresets.delete](#deckpresetsdelete).
 - **Note types:** [noteTypes.list](#notetypeslist), [noteTypes.get](#notetypesget), [noteTypes.create](#notetypescreate), [noteTypes.update](#notetypesupdate), [noteTypes.editStructure](#notetypeseditstructure), [noteTypes.getTemplateUsage](#notetypesgettemplateusage), [noteTypes.replaceText](#notetypesreplacetext), [noteTypes.deleteUnused](#notetypesdeleteunused).
@@ -1775,6 +1775,38 @@ Read authoritative current scheduling state.
   "method": "scheduling.get",
   "params": {
     "cardId": "1700000000002"
+  }
+}
+```
+
+### `scheduling.getQueue`
+
+Read cards in native scheduler order with remaining counts.
+
+**Scope:** collection. **Completion:** completed. **Undo:** `none`.
+
+**Parameters**
+
+| Property | Type | Required | Details |
+| --- | --- | --- | --- |
+| `fetchLimit` | integer | No | Default: `1`. Minimum: 1. Maximum: 1000. |
+| `session` | [SessionId](#type-sessionid) | No | — |
+
+**Returns**
+
+[SchedulingQueue](#type-schedulingqueue).
+
+**Errors:** `collectionUnavailable`, `internalError`, `invalidParams`, `staleSession`.
+
+**Example request**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "scheduling.getQueue",
+  "params": {
+    "fetchLimit": 2
   }
 }
 ```
@@ -6072,6 +6104,15 @@ Exactly one variant below.
 | `total` | integer or null | Yes | — |
 | `message` | string | Yes | — |
 
+<a id="type-queuedcard"></a>
+
+### QueuedCard
+
+| Property | Type | Required | Details |
+| --- | --- | --- | --- |
+| `cardId` | [EntityId](#type-entityid) | Yes | — |
+| `queue` | `"new"` / `"learning"` / `"review"` | Yes | — |
+
 <a id="type-rating"></a>
 
 ### Rating
@@ -6223,6 +6264,17 @@ Exactly one variant below.
 | `stateToken` | string or null | Yes | — |
 | `answers` | array of [Prediction](#type-prediction) | Yes | — |
 | `source` | `"reviewer"` | Yes | — |
+
+<a id="type-schedulingqueue"></a>
+
+### SchedulingQueue
+
+| Property | Type | Required | Details |
+| --- | --- | --- | --- |
+| `cards` | array of [QueuedCard](#type-queuedcard) | Yes | Maximum items: 1000. |
+| `newCount` | integer | Yes | Minimum: 0. |
+| `learningCount` | integer | Yes | Minimum: 0. |
+| `reviewCount` | integer | Yes | Minimum: 0. |
 
 <a id="type-schedulingstate"></a>
 
