@@ -602,6 +602,17 @@ class Services:
     def scheduling_answerMany(self, answers):
         return self.many(answers, lambda data: self.scheduling_answer(**data))
 
+    def scheduling_repositionNewCards(self, cardIds, startingFrom, stepSize=1, randomize=False, shiftExisting=False):
+        cards = [self.card(id) for id in dict.fromkeys(cardIds)]
+        if any(card.type != 0 or card.queue != 0 or card.odid for card in cards):
+            raise ApiError('invalidState', 'Repositioning requires active new cards outside filtered decks.')
+        if startingFrom + (len({card.nid for card in cards}) - 1) * stepSize > 2147483647:
+            raise ApiError('invalidParams', 'New card positions exceed the supported range.')
+        out = self.change(self.col.sched.reposition_new_cards(
+            card_ids=[card.id for card in cards], starting_from=startingFrom,
+            step_size=stepSize, randomize=randomize, shift_existing=shiftExisting))
+        return {'changedCount': out.count}
+
     def scheduling_reset(self, cardIds, restorePosition=True, resetCounts=False, log=True):
         from anki.scheduler.base import ScheduleCardsAsNew
         def reset(id):

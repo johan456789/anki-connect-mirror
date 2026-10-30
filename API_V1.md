@@ -306,7 +306,7 @@ envelope. Clients should tolerate added response properties.
 - **Notes:** [notes.get](#notesget), [notes.getMany](#notesgetmany), [notes.search](#notessearch), [notes.validate](#notesvalidate), [notes.validateMany](#notesvalidatemany), [notes.create](#notescreate), [notes.createMany](#notescreatemany), [notes.update](#notesupdate), [notes.delete](#notesdelete), [notes.planConversion](#notesplanconversion), [notes.convert](#notesconvert), [notes.findEmpty](#notesfindempty).
 - **Tags:** [tags.list](#tagslist), [tags.add](#tagsadd), [tags.remove](#tagsremove), [tags.replace](#tagsreplace), [tags.deleteUnused](#tagsdeleteunused).
 - **Cards:** [cards.get](#cardsget), [cards.getMany](#cardsgetmany), [cards.search](#cardssearch), [cards.render](#cardsrender), [cards.move](#cardsmove), [cards.setSuspended](#cardssetsuspended), [cards.setFlags](#cardssetflags).
-- **Scheduling:** [scheduling.get](#schedulingget), [scheduling.getQueue](#schedulinggetqueue), [scheduling.predict](#schedulingpredict), [scheduling.getDue](#schedulinggetdue), [scheduling.answer](#schedulinganswer), [scheduling.answerMany](#schedulinganswermany), [scheduling.reset](#schedulingreset), [scheduling.setDueDate](#schedulingsetduedate).
+- **Scheduling:** [scheduling.get](#schedulingget), [scheduling.getQueue](#schedulinggetqueue), [scheduling.predict](#schedulingpredict), [scheduling.getDue](#schedulinggetdue), [scheduling.answer](#schedulinganswer), [scheduling.answerMany](#schedulinganswermany), [scheduling.repositionNewCards](#schedulingrepositionnewcards), [scheduling.reset](#schedulingreset), [scheduling.setDueDate](#schedulingsetduedate).
 - **Decks:** [decks.list](#deckslist), [decks.get](#decksget), [decks.create](#deckscreate), [decks.update](#decksupdate), [decks.delete](#decksdelete), [decks.getCounts](#decksgetcounts).
 - **Deck presets:** [deckPresets.list](#deckpresetslist), [deckPresets.get](#deckpresetsget), [deckPresets.create](#deckpresetscreate), [deckPresets.update](#deckpresetsupdate), [deckPresets.assign](#deckpresetsassign), [deckPresets.delete](#deckpresetsdelete).
 - **Note types:** [noteTypes.list](#notetypeslist), [noteTypes.get](#notetypesget), [noteTypes.create](#notetypescreate), [noteTypes.update](#notetypesupdate), [noteTypes.editStructure](#notetypeseditstructure), [noteTypes.getTemplateUsage](#notetypesgettemplateusage), [noteTypes.replaceText](#notetypesreplacetext), [noteTypes.deleteUnused](#notetypesdeleteunused).
@@ -1995,6 +1995,60 @@ Get a fresh prediction token for each answer. Each item is independently validat
         "elapsedMs": 2500
       }
     ]
+  }
+}
+```
+
+### `scheduling.repositionNewCards`
+
+Reposition active new cards using the native scheduler.
+
+**Scope:** collection. **Completion:** completed. **Undo:** `single`.
+
+Learning, review, suspended, buried or filtered cards return `invalidState`.
+Duplicate IDs are ignored.
+
+Anki assigns positions by note, so selected siblings share a position. With
+`randomize=false`, notes follow the first occurrence in `cardIds`. With
+`shiftExisting=true`, Anki shifts existing new-card positions to make room.
+The entire operation, including shifts, can be undone once with `collection.undo`.
+
+**Parameters**
+
+| Property | Type | Required | Details |
+| --- | --- | --- | --- |
+| `cardIds` | array of [EntityId](#type-entityid) | Yes | At least one card. |
+| `startingFrom` | integer | Yes | Minimum: 0. |
+| `stepSize` | integer | No | Default: 1. Minimum: 1. |
+| `randomize` | boolean | No | Default: `false`. |
+| `shiftExisting` | boolean | No | Default: `false`. |
+| `session` | [SessionId](#type-sessionid) | No | — |
+
+The final assigned position must not exceed 2147483647.
+
+**Returns**
+
+| Property | Type | Required | Details |
+| --- | --- | --- | --- |
+| `changedCount` | integer | Yes | Native count of selected cards repositioned, excluding shifted cards. |
+
+**Errors:** `collectionUnavailable`, `internalError`, `invalidParams`, `invalidState`, `notFound`, `staleSession`.
+
+**Example request**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "scheduling.repositionNewCards",
+  "params": {
+    "cardIds": [
+      "1700000000002"
+    ],
+    "startingFrom": 0,
+    "stepSize": 1,
+    "randomize": false,
+    "shiftExisting": false
   }
 }
 ```

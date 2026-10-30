@@ -6782,6 +6782,108 @@
         }
       ]
     },
+    "scheduling_repositionNewCards_Params": {
+      "type": "object",
+      "properties": {
+        "cardIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "minItems": 1
+        },
+        "startingFrom": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "stepSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647,
+          "default": 1
+        },
+        "randomize": {
+          "type": "boolean",
+          "default": false
+        },
+        "shiftExisting": {
+          "type": "boolean",
+          "default": false
+        },
+        "session": {
+          "$ref": "#/$defs/SessionId"
+        }
+      },
+      "required": [
+        "cardIds",
+        "startingFrom"
+      ],
+      "additionalProperties": false
+    },
+    "scheduling_repositionNewCards_Result": {
+      "type": "object",
+      "properties": {
+        "changedCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "changedCount"
+      ],
+      "additionalProperties": false
+    },
+    "scheduling_repositionNewCards_Request": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/RpcId"
+        },
+        "method": {
+          "const": "scheduling.repositionNewCards"
+        },
+        "params": {
+          "$ref": "#/$defs/scheduling_repositionNewCards_Params"
+        }
+      },
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "scheduling_repositionNewCards_Response": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            },
+            "id": {
+              "$ref": "#/$defs/RpcId"
+            },
+            "result": {
+              "$ref": "#/$defs/scheduling_repositionNewCards_Result"
+            }
+          },
+          "required": [
+            "jsonrpc",
+            "id",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/RpcErrorResponse"
+        }
+      ]
+    },
     "scheduling_reset_Params": {
       "type": "object",
       "properties": {
@@ -14535,6 +14637,34 @@
       ],
       "notes": ""
     },
+    "scheduling.repositionNewCards": {
+      "params": {
+        "$ref": "#/$defs/scheduling_repositionNewCards_Params"
+      },
+      "result": {
+        "$ref": "#/$defs/scheduling_repositionNewCards_Result"
+      },
+      "request": {
+        "$ref": "#/$defs/scheduling_repositionNewCards_Request"
+      },
+      "response": {
+        "$ref": "#/$defs/scheduling_repositionNewCards_Response"
+      },
+      "summary": "Reposition active new cards using the native scheduler.",
+      "scope": "collection",
+      "effect": "write",
+      "completion": "completed",
+      "undo": "single",
+      "errors": [
+        "collectionUnavailable",
+        "internalError",
+        "invalidParams",
+        "invalidState",
+        "notFound",
+        "staleSession"
+      ],
+      "notes": "Requires active new cards outside filtered decks. changedCount excludes shifted cards."
+    },
     "scheduling.reset": {
       "params": {
         "$ref": "#/$defs/scheduling_reset_Params"
@@ -16668,6 +16798,27 @@
           }
         }
       }
+    },
+    {
+      "method": "scheduling.repositionNewCards",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "scheduling.repositionNewCards",
+        "params": {
+          "cardIds": [
+            "1700000000002"
+          ],
+          "startingFrom": 0
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "changedCount": 1
+        }
+      }
     }
   ],
   "x-invalidExamples": [
@@ -16801,6 +16952,15 @@
       "method": "media.get",
       "params": {
         "filename": "bad\u0000name"
+      }
+    },
+    {
+      "method": "scheduling.repositionNewCards",
+      "params": {
+        "cardIds": [
+          "1700000000002"
+        ],
+        "startingFrom": -1
       }
     }
   ],

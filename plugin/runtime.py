@@ -26,6 +26,7 @@ NATIVE_REQUIREMENTS = {
     'scheduling.predict': ('_backend.get_scheduling_states', '_backend.describe_next_states'),
     'scheduling.answer': ('sched.build_answer', 'sched.answer_card'),
     'scheduling.answerMany': ('sched.build_answer', 'sched.answer_card'),
+    'scheduling.repositionNewCards': ('sched.reposition_new_cards',),
     'scheduling.reset': ('_backend.schedule_cards_as_new',),
     'reviewer.answer': ('sched.build_answer', 'sched.answer_card', 'sched.state_is_leech'),
     'deckPresets.get': ('_backend.get_deck_config',),

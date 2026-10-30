@@ -2000,6 +2000,72 @@
         "cardsInfo"
       ],
       "notes": "Jiten-origin field probe succeeds through controlled HTTP admission with and without an API key."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_to_front_preserves_state_queue_and_undo",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Repositions a new card ahead of existing cards and restores its position with native undo. Checks duplicate IDs and preserved scheduling and history. Randomization is not tested."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_order_step_shift_and_single_undo",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Checks input order, step size, shifted positions and a single undo restoring all affected cards."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_siblings_share_native_note_position",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Selected siblings receive the same position, and changedCount includes both cards."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_rejects_invalid_state_before_any_changes",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Rejects learning, review, suspended, buried and filtered cards before moving any selected cards."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_missing_card_does_not_move_existing_cards",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "A missing card rejects the selection before existing cards move."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_position_overflow_does_not_change_cards",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Rejects an overflowing final position before moving selected cards."
     }
   ],
   "unreferenced": {
