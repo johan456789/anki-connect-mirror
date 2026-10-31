@@ -2018,13 +2018,16 @@ The entire operation, including shifts, can be undone once with `collection.undo
 | Property | Type | Required | Details |
 | --- | --- | --- | --- |
 | `cardIds` | array of [EntityId](#type-entityid) | Yes | At least one card. |
-| `startingFrom` | integer | Yes | Minimum: 0. |
-| `stepSize` | integer | No | Default: 1. Minimum: 1. |
+| `startingFrom` | integer | Yes | Minimum: 0. Maximum: 2147483647. |
+| `stepSize` | integer | No | Default: 1. Minimum: 1. Maximum: 2147483647. |
 | `randomize` | boolean | No | Default: `false`. |
 | `shiftExisting` | boolean | No | Default: `false`. |
 | `session` | [SessionId](#type-sessionid) | No | — |
 
-The final assigned position must not exceed 2147483647.
+The final assigned position and positions shifted by Anki must not exceed
+2147483647. With `shiftExisting=true`, Anki shifts all new cards at or above
+`startingFrom` across decks, including suspended, buried and filtered new cards,
+by the number of distinct selected cards multiplied by `stepSize`.
 
 **Returns**
 
@@ -2051,6 +2054,12 @@ The final assigned position must not exceed 2147483647.
     "shiftExisting": false
   }
 }
+```
+
+**Example response**
+
+```json
+{"jsonrpc":"2.0","id":1,"result":{"changedCount":1}}
 ```
 
 ### `scheduling.reset`

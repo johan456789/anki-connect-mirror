@@ -14663,7 +14663,7 @@
         "notFound",
         "staleSession"
       ],
-      "notes": "Requires active new cards outside filtered decks. changedCount excludes shifted cards."
+      "notes": "Requires active new cards outside filtered decks. changedCount excludes shifted cards. Assigned and shifted positions must not exceed 2147483647. shiftExisting affects new cards across decks, including suspended, buried and filtered cards."
     },
     "scheduling.reset": {
       "params": {

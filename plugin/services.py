@@ -608,6 +608,13 @@ class Services:
             raise ApiError('invalidState', 'Repositioning requires active new cards outside filtered decks.')
         if startingFrom + (len({card.nid for card in cards}) - 1) * stepSize > 2147483647:
             raise ApiError('invalidParams', 'New card positions exceed the supported range.')
+        if shiftExisting:
+            # Native shifting uses the card count (including siblings), and
+            # includes suspended, buried and filtered new cards across decks.
+            shift = len(cards) * stepSize
+            highest = self.col.db.scalar('select max(due) from cards where type=0 and due>=?', startingFrom)
+            if shift > 4294967295 or (highest is not None and highest + shift > 2147483647):
+                raise ApiError('invalidParams', 'Shifted new card positions exceed the supported range.')
         out = self.change(self.col.sched.reposition_new_cards(
             card_ids=[card.id for card in cards], starting_from=startingFrom,
             step_size=stepSize, randomize=randomize, shift_existing=shiftExisting))

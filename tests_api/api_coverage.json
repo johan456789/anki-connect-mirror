@@ -1216,8 +1216,10 @@
         "browser.getSelection",
         "browser.open",
         "browser.select",
+        "collection.undo",
         "noteTypes.editStructure",
         "notes.create",
+        "scheduling.repositionNewCards",
         "scheduling.setDueDate"
       ],
       "legacy": [
@@ -1226,7 +1228,7 @@
         "guiSelectNote",
         "guiSelectedNotes"
       ],
-      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Silent-card audio checks call plumbing only; audible output remains deferred."
+      "notes": "Real Qt windows, native collection, and disposable profiles. Checks observable UI/native effects and completion. Legacy helper preserves admission replies and then awaits created operations. Repositioning with an open browser verifies shifted positions and native card-change notifications before replies; after closing the browser, a single undo restores the positions."
     },
     {
       "source": "tools/smoke_gui.py",
@@ -2010,7 +2012,7 @@
         "scheduling.repositionNewCards"
       ],
       "legacy": [],
-      "notes": "Repositions a new card ahead of existing cards and restores its position with native undo. Checks duplicate IDs and preserved scheduling and history. Randomization is not tested."
+      "notes": "Repositions a new card ahead of existing cards and restores its position with native undo. Checks duplicate IDs and preserved scheduling and history."
     },
     {
       "source": "tests_api/test_reposition.py",
@@ -2066,6 +2068,50 @@
       ],
       "legacy": [],
       "notes": "Rejects an overflowing final position before moving selected cards."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_shift_overflow_does_not_change_cards",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Rejects overflowing shifts of new cards across decks, including suspended, buried and filtered cards, without changing positions, undo history or prediction generation."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_shift_counts_siblings_before_checking_overflow",
+      "layer": "native-service",
+      "outcome": "failure",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Overflow validation accounts for the native shift by selected card count, including siblings sharing a position."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_allows_boundary_positions_and_safe_shifts",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Accepts the largest supported assigned and shifted positions; duplicate selections do not enlarge shifts, and undo restores shifted cards."
+    },
+    {
+      "source": "tests_api/test_reposition.py",
+      "case": "test_reposition_randomized_notes_keep_steps_and_siblings_together",
+      "layer": "native-service",
+      "outcome": "success",
+      "v1": [
+        "scheduling.repositionNewCards"
+      ],
+      "legacy": [],
+      "notes": "Randomization preserves the position range, step size and shared sibling positions, with native undo restoring the original positions."
     }
   ],
   "unreferenced": {

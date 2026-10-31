@@ -97,3 +97,80 @@ def test_reposition_position_overflow_does_not_change_cards(native):
         call(service, 'scheduling.repositionNewCards', cardIds=ids, startingFrom=2147483647)
     assert caught.value.kind == 'invalidParams'
     assert positions(service, ids) == before
+
+
+@pytest.mark.parametrize('state', ['new', 'suspended', 'buried', 'filtered'])
+@pytest.mark.parametrize('step, due', [(1, 2147483647), (2147483647, 1)])
+def test_reposition_shift_overflow_does_not_change_cards(native, state, step, due):
+    owner, service = native
+    ids = new_cards(service)
+    card = service.col.get_card(int(ids[0]))
+    card.due = due
+    if state == 'suspended':
+        card.queue = -1
+    elif state == 'buried':
+        card.queue = -2
+    elif state == 'filtered':
+        card.odid, card.odue = card.did, card.due
+        card.did = service.col.decks.new_filtered('Filtered')
+    else:
+        card.did = service.col.decks.id('Other')
+    service.col.update_card(card)
+    before = service.col.db.all('select id, due, odue from cards order by id')
+    undo = service.col.undo_status()
+    generation = service.runtime.generation
+    with pytest.raises(ApiError) as caught:
+        call(service, 'scheduling.repositionNewCards', cardIds=[ids[-1]],
+             startingFrom=0, stepSize=step, shiftExisting=True)
+    assert caught.value.kind == 'invalidParams'
+    assert service.col.db.all('select id, due, odue from cards order by id') == before
+    assert service.col.undo_status() == undo
+    assert service.runtime.generation == generation
+
+
+def test_reposition_shift_counts_siblings_before_checking_overflow(native):
+    owner, service = native
+    existing = new_cards(service, 1)
+    card = service.col.get_card(int(existing[0]))
+    card.due = 2147483644
+    service.col.update_card(card)
+    siblings = call(service, 'notes.create', noteType={'name': 'Basic (and reversed card)'},
+                    deck={'name': 'Default'}, fields={'Front': 'siblings', 'Back': 'answer'})['cardIds']
+    before = positions(service, existing + siblings)
+    with pytest.raises(ApiError) as caught:
+        call(service, 'scheduling.repositionNewCards', cardIds=siblings,
+             startingFrom=0, stepSize=2, shiftExisting=True)
+    assert caught.value.kind == 'invalidParams'
+    assert positions(service, existing + siblings) == before
+
+
+def test_reposition_allows_boundary_positions_and_safe_shifts(native):
+    owner, service = native
+    ids = new_cards(service)
+    assert call(service, 'scheduling.repositionNewCards', cardIds=[ids[0]],
+                startingFrom=2147483646) == {'changedCount': 1}
+    before = positions(service, ids)
+    assert call(service, 'scheduling.repositionNewCards', cardIds=[ids[-1], ids[-1]],
+                startingFrom=0, shiftExisting=True) == {'changedCount': 1}
+    assert positions(service, ids) == [2147483647, before[1] + 1, 0]
+    call(service, 'collection.undo')
+    assert positions(service, ids) == before
+    assert call(service, 'scheduling.repositionNewCards', cardIds=[ids[-1]],
+                startingFrom=2147483647) == {'changedCount': 1}
+    assert positions(service, ids)[-1] == 2147483647
+
+
+def test_reposition_randomized_notes_keep_steps_and_siblings_together(native):
+    owner, service = native
+    notes = [call(service, 'notes.create', noteType={'name': 'Basic (and reversed card)'},
+                  deck={'name': 'Default'}, fields={'Front': str(index), 'Back': 'answer'})
+             for index in range(4)]
+    ids = [id for note in notes for id in note['cardIds']]
+    before = positions(service, ids)
+    assert call(service, 'scheduling.repositionNewCards', cardIds=ids,
+                startingFrom=5, stepSize=3, randomize=True) == {'changedCount': 8}
+    assigned = [positions(service, note['cardIds']) for note in notes]
+    assert all(first == second for first, second in assigned)
+    assert sorted(first for first, second in assigned) == [5, 8, 11, 14]
+    call(service, 'collection.undo')
+    assert positions(service, ids) == before

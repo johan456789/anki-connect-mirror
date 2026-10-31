@@ -230,6 +230,30 @@ try:
         call('notes.create', noteType={'name': 'Basic'}, deck={'name': 'Default'}, fields={'Front': 'Second GUI question'})
         browser = owner.runtime.gui.browser()
         expected_cards = set(aqt.mw.col.find_cards(''))
+        before = {id: aqt.mw.col.get_card(id).due for id in expected_cards}
+        notifications = []
+        def reposition_notified(changes, initiator):
+            notifications.append(changes.card)
+        aqt.gui_hooks.operation_did_execute.append(reposition_notified)
+        try:
+            assert call('scheduling.repositionNewCards', cardIds=[selected_card],
+                        startingFrom=0, shiftExisting=True) == {'changedCount': 1}
+            assert any(notifications), 'Reposition replied before native change notification'
+            assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == {
+                id: 0 if str(id) == selected_card else due + 1 for id, due in before.items()}
+            # Collection undo requires closing affected editors first.
+            result(owner.runtime.gui.javascript(browser.editor, 'await saveNow(); return true;'))
+            aqt.dialogs.closeAll(onsuccess=lambda: None)
+            wait_until(aqt.dialogs.allClosed)
+            notifications.clear()
+            call('collection.undo')
+            assert any(notifications), 'Undo replied before native change notification'
+            assert {id: aqt.mw.col.get_card(id).due for id in expected_cards} == before
+        finally:
+            aqt.gui_hooks.operation_did_execute.remove(reposition_notified)
+        print('PASS new-card reposition, shifts, native notifications and undo with open browser', flush=True)
+        call('browser.open', query='')
+        browser = owner.runtime.gui.browser()
         # Distinct due days avoid relying on native tie-breaking between sibling cards.
         for index, id in enumerate(sorted(expected_cards)):
             call('scheduling.setDueDate', cardIds=[str(id)], days=str(index + 1))
